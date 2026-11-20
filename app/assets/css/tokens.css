@@ -1,0 +1,91 @@
+/*
+ * AIViz design tokens — locked from design/concept-page-mock.html (v2).
+ * Light is the default; dark applies via the OS setting unless the user
+ * picked a theme explicitly (data-theme on <html>).
+ */
+:root {
+  --bg: #ffffff;
+  --surface: #f7f8fa;
+  --surface-2: #eef0f4;
+  --line: #e7e9ee;
+  --line-strong: #d5d9e1;
+  --grid: rgba(16, 24, 40, 0.05);
+  --axis: #c3c8d2;
+
+  --text: #1f2430;
+  --text-body: #3a4150;
+  --text-dim: #646b79;
+  --text-faint: #a1a7b3;
+
+  --brand: #5b5bd6;
+  --brand-soft: #ececfb;
+
+  /* semantic diagram colours: one hue per role, reused across diagram, panel and text */
+  --c-blue: #3f6fe0;   --c-blue-soft: #e4ecfd;
+  --c-rose: #d9536c;   --c-rose-soft: #fce6ea;
+  --c-violet: #7c5ce6; --c-violet-soft: #eee9fc;
+  --c-green: #228a64;  --c-green-soft: #def4ea;
+  --c-amber: #b7791f;  --c-amber-soft: #fbf0dc;
+
+  --trk-bg: rgba(247, 248, 250, 0.72);
+  --trk-border: rgba(213, 217, 225, 0.9);
+  --trk-live: #ff5a5a;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.06);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-math: "KaTeX_Math", "Times New Roman", serif;
+  --font-math-upright: "KaTeX_Main", "Times New Roman", serif;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-fast: 140ms;
+  --dur-ui: 200ms;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+
+  --sidebar-w: 236px;
+  --panel-w: 300px;
+  --topbar-h: 56px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f12; --surface: #14171c; --surface-2: #1b1f26; --line: #22262e; --line-strong: #2f3440;
+    --grid: rgba(255, 255, 255, 0.04); --axis: #3a404c;
+    --text: #e6e9ef; --text-body: #c5cad3; --text-dim: #959cab; --text-faint: #5d6472;
+    --brand: #9191f7; --brand-soft: rgba(145, 145, 247, 0.14);
+    --c-blue: #7ea6ff;   --c-blue-soft: rgba(126, 166, 255, 0.14);
+    --c-rose: #f2879c;   --c-rose-soft: rgba(242, 135, 156, 0.14);
+    --c-violet: #ad97ff; --c-violet-soft: rgba(173, 151, 255, 0.14);
+    --c-green: #5fd4a6;  --c-green-soft: rgba(95, 212, 166, 0.12);
+    --c-amber: #f2c46d;  --c-amber-soft: rgba(242, 196, 109, 0.12);
+    --trk-bg: rgba(20, 23, 28, 0.7); --trk-border: rgba(64, 70, 84, 0.8);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d0f12; --surface: #14171c; --surface-2: #1b1f26; --line: #22262e; --line-strong: #2f3440;
+  --grid: rgba(255, 255, 255, 0.04); --axis: #3a404c;
+  --text: #e6e9ef; --text-body: #c5cad3; --text-dim: #959cab; --text-faint: #5d6472;
+  --brand: #9191f7; --brand-soft: rgba(145, 145, 247, 0.14);
+  --c-blue: #7ea6ff;   --c-blue-soft: rgba(126, 166, 255, 0.14);
+  --c-rose: #f2879c;   --c-rose-soft: rgba(242, 135, 156, 0.14);
+  --c-violet: #ad97ff; --c-violet-soft: rgba(173, 151, 255, 0.14);
+  --c-green: #5fd4a6;  --c-green-soft: rgba(95, 212, 166, 0.12);
+  --c-amber: #f2c46d;  --c-amber-soft: rgba(242, 196, 109, 0.12);
+  --trk-bg: rgba(20, 23, 28, 0.7); --trk-border: rgba(64, 70, 84, 0.8);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
