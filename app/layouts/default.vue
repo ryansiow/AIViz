@@ -24,6 +24,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     <main class="shell-main">
       <slot />
     </main>
+    <ClientOnly><TrackOverlay /></ClientOnly>
   </div>
 </template>
 

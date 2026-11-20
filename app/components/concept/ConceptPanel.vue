@@ -1,29 +1,36 @@
 <script setup lang="ts">
-import type { Concept } from '~/data/curriculum'
+import type { LogEntry, ParamSchema, Preset, Readout } from '~/types/concept'
 
 /**
- * Right-hand panel: Inputs, Values and Log. Phase 2–3 generates the inputs
- * from the concept's `params` schema and streams values and log lines from
- * the running timeline. For now each card shows its empty state.
+ * Right-hand panel: Inputs, Values and Log. Each card shows an empty state
+ * until the concept provides data for it.
  */
-defineProps<{ concept: Concept }>()
+const props = defineProps<{
+  schema?: ParamSchema
+  presets?: Preset[]
+  readouts?: Readout[]
+  formula?: string
+  log?: LogEntry[]
+}>()
+const values = defineModel<Record<string, unknown>>('values')
+const logCount = computed(() => props.log?.length ?? 0)
 </script>
 
 <template>
   <aside class="panel" aria-label="Controls">
     <section class="card">
       <h2 class="card-title">Inputs</h2>
-      <p class="empty">Inputs for this concept will appear here.</p>
+      <ParamPanel v-if="schema && values" v-model="values" :schema="schema" :presets="presets" />
+      <p v-else class="empty">Inputs for this concept will appear here.</p>
     </section>
     <section class="card">
       <h2 class="card-title">Values</h2>
-      <p class="empty">Live values update as the animation plays.</p>
+      <ValueReadouts v-if="readouts?.length" :readouts="readouts" :formula="formula" />
+      <p v-else class="empty">Live values update as the animation plays.</p>
     </section>
     <section class="card log">
-      <h2 class="card-title">Log <span>0 entries</span></h2>
-      <div class="log-body" aria-live="polite">
-        <p class="empty">Each step writes its calculation here.</p>
-      </div>
+      <h2 class="card-title">Log <span>{{ logCount }} {{ logCount === 1 ? 'entry' : 'entries' }}</span></h2>
+      <LogFeed :entries="log ?? []" />
     </section>
   </aside>
 </template>
@@ -34,13 +41,13 @@ defineProps<{ concept: Concept }>()
   min-height: 0; overflow-y: auto; border-left: 1px solid var(--line); background: var(--surface);
 }
 .card { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px; }
-.card-title { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+.card-title { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px; font-weight: 600; color: var(--text-dim); }
 .card-title span { font-weight: 400; color: var(--text-faint); }
 .empty { font-size: 13px; color: var(--text-faint); }
 .log { display: flex; flex-direction: column; min-height: 0; }
-.log-body { overflow-y: auto; font: 11.5px/1.75 var(--font-mono); }
 
 @media (max-width: 1100px) {
   .panel { border-left: 0; border-top: 1px solid var(--line); grid-template-rows: auto; }
+  .log :deep(.log-body) { max-height: 220px; }
 }
 </style>
