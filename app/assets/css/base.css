@@ -1,0 +1,39 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #__nuxt { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.55 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input { font: inherit; color: inherit; }
+
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+
+.katex { font-size: 1.08em; }
+
+/* semantic colour helpers (text) */
+.c-blue { color: var(--c-blue); }
+.c-rose { color: var(--c-rose); }
+.c-violet { color: var(--c-violet); }
+.c-green { color: var(--c-green); }
+.c-amber { color: var(--c-amber); }
+
+/* shared pressable feedback (emil-design-eng: subtle scale on :active) */
+.pressable { transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-fast) ease, color var(--dur-fast) ease; }
+.pressable:active { transform: scale(0.96); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
