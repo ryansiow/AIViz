@@ -37,7 +37,7 @@ export const curriculum: Chapter[] = [
     blurb: 'The vector and calculus toolkit every model is built from.',
     concepts: [
       c('vectors', 'Vectors', 'Arrows with direction and length; lists of numbers.'),
-      c('dot-product', 'Dot Product', 'One number that says how much two vectors align.'),
+      c('dot-product', 'Dot Product', 'One number that says how much two vectors align.', 'ready'),
       c('cosine-similarity', 'Cosine Similarity', 'Compare direction, ignore length.'),
       c('matrix-multiplication', 'Matrix Multiplication', 'Many dot products at once.'),
       c('derivatives-chain-rule', 'Derivatives & Chain Rule', 'How a change flows through composed functions.'),
