@@ -313,7 +313,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 
 ## 10. Git, PRs and CI
 
-- **Commits go directly to `main`** while the owner is the only contributor (owner's decision, 2026-11-21, from Phase 5 on). Still run the full definition of done (§3) before pushing, since CI runs on every push to `main`. If the owner asks for a branch and PR for a change, use one (`phase-N-…`), and go back to branches + PRs if other contributors join.
+- **Commit to `main` locally, never push.** The owner pushes manually (owner's decision, 2026-11-21). Commits go directly to `main` while the owner is the only contributor. Run the full definition of done (§3) before committing, because CI runs when the owner pushes. Do not run `git push`, even when asked to "ship" or "finish": say the commits are ready to push. If the owner asks for a branch and PR, use one (`phase-N-…`). Go back to branches + PRs if other contributors join.
 - Commit or push only when the owner asks. Commit messages describe *what and why*, in sections. End commit messages with:
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
   End PR descriptions with: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
@@ -336,6 +336,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 | 6 | **Build out the curriculum:** 1–2 concepts per week, chapter by chapter, using the §7 checklist. Temperature and Learning Rate can reuse the Softmax / Gradient Descent modules with their own step emphasis | Planned |
 | 7 | **Quality bar:** keyboard and a11y pass, reduced-motion review, contrast, tablet layout, progress tracking (localStorage; the sidebar dots already support `ready`), worst-case data (break-ui), motion audit (improve-animations) | Planned |
 | — | Hosting (static: Cloudflare Pages or Vercel) | Deferred until the owner approves |
+| — | **GitHub Issues as the work queue:** the owner will file Issues; Claude fetches them daily (`gh issue list`) and works on them, committing locally (no push, see §10) | Planned, not set up yet |
 
 Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent`. All other 38 concepts have a placeholder stage.
 
