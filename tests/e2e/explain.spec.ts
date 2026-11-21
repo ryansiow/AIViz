@@ -8,7 +8,13 @@ const EXPLAINED = [
   '/foundations/cosine-similarity',
   '/foundations/matrix-multiplication',
   '/foundations/derivatives-chain-rule',
+  '/learning-basics/supervised-learning',
   '/learning-basics/loss-function',
+  '/learning-basics/maximum-likelihood',
+  '/learning-basics/cross-entropy',
+  '/learning-basics/overfitting',
+  '/learning-basics/regularization',
+  '/learning-basics/training-curve',
   '/optimisation/gradient-descent',
   '/optimisation/learning-rate',
   '/transformers-llms/softmax',
@@ -61,7 +67,7 @@ test('display maths sits in a formula card', async ({ page }) => {
 })
 
 test('a concept without an explainer shows its summary and a note', async ({ page }) => {
-  await visit(page, '/learning-basics/supervised-learning?view=explain')
+  await visit(page, '/neural-networks/perceptron?view=explain')
   await expect(page.locator('.explain .pending')).toContainText('hasn’t been written yet')
   await expect(page.getByRole('note')).toHaveCount(0)
 })
@@ -75,14 +81,14 @@ test.describe('draft flag', () => {
   })
 
   test('no chip for a planned concept without an explainer', async ({ page }) => {
-    await visit(page, '/learning-basics/supervised-learning')
+    await visit(page, '/neural-networks/perceptron')
     await expect(page.locator('.draft-chip')).toHaveCount(0)
   })
 
   test("the sidebar marks items awaiting review with an amber dot", async ({ page }) => {
     await visit(page, '/foundations/dot-product')
     const sidebar = page.getByRole('navigation', { name: 'Curriculum' })
-    const dot = (name: string) => sidebar.getByRole('link', { name }).locator('.dot')
+    const dot = (name: string | RegExp) => sidebar.getByRole('link', { name }).locator('.dot')
 
     // Ready but not reviewed: filled amber.
     await expect(dot('Vectors (in draft)')).toHaveClass(/\bready\b.*\bdraft\b/)
@@ -97,10 +103,12 @@ test.describe('draft flag', () => {
     })
     expect(fill).toBe(amber)
 
-    // Planned with a draft explainer: amber ring. No explainer: unchanged. (The sidebar opens the current chapter.)
-    await visit(page, '/learning-basics/supervised-learning')
-    await expect(dot('Loss Function (in draft)')).toHaveClass(/\bplanned\b.*\bdraft\b/)
-    await expect(dot('Supervised Learning')).not.toHaveClass(/\bdraft\b/)
+    // Planned without an explainer: unchanged. (The sidebar opens the current chapter.)
+    // No planned concept has a draft explainer at the moment, so the amber-ring case
+    // (planned + draft) has no real example; it returns when one is written ahead of its visualisation.
+    await visit(page, '/neural-networks/perceptron')
+    await expect(dot(/^Perceptron/)).toHaveClass(/\bplanned\b/)
+    await expect(dot(/^Perceptron/)).not.toHaveClass(/\bdraft\b/)
   })
 })
 

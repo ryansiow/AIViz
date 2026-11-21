@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { visit } from './helpers'
 
 /** A live concept page at phone width. */
-for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
+for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/learning-basics/supervised-learning', '/learning-basics/loss-function', '/learning-basics/maximum-likelihood', '/learning-basics/cross-entropy', '/learning-basics/overfitting', '/learning-basics/regularization', '/learning-basics/training-curve', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
   test(`${path} works at phone width`, async ({ page }) => {
     await visit(page, path)
     await page.locator('svg.scene.ready').waitFor()

@@ -167,7 +167,7 @@ test.describe('reduced motion', () => {
 })
 
 test('concepts without a visualisation keep the placeholder and a disabled player', async ({ page }) => {
-  await visit(page, '/learning-basics/supervised-learning')
+  await visit(page, '/neural-networks/perceptron')
   await expect(page.getByText('Visualization coming soon')).toBeVisible()
   await expect(playBtn(page)).toBeDisabled()
 })

@@ -12,7 +12,7 @@ async function open(page: Page, path: string) {
 }
 
 test.describe('every ready concept', () => {
-  for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
+  for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/learning-basics/supervised-learning', '/learning-basics/loss-function', '/learning-basics/maximum-likelihood', '/learning-basics/cross-entropy', '/learning-basics/overfitting', '/learning-basics/regularization', '/learning-basics/training-curve', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
     test(`${path} plays through every step without errors`, async ({ page }) => {
       const errors: string[] = []
       page.on('pageerror', (e) => errors.push(String(e)))
@@ -272,5 +272,81 @@ test.describe('derivatives and chain rule', () => {
     await expect(page.locator('.player .pill')).toHaveText('7 / 7')
     await expect(page.locator('[data-el="result"]')).toContainText('0.197 × 2')
     await expect(page.locator('[data-el="result"]')).toContainText('= 0.393')
+  })
+})
+
+/* Phase 6 Batch 3: Learning Basics. */
+
+test.describe('learning basics', () => {
+  test('supervised learning: 4.5 h → 73; 12 h is flagged as impossible', async ({ page }) => {
+    await open(page, '/learning-basics/supervised-learning')
+    await goToStep(page, 4)
+    await expect(page.locator('[data-el="q-pt"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="q-label"]')).toHaveText('73?')
+    await page.getByRole('button', { name: 'Far outside (12 h)' }).click()
+    await expect(page.locator('[data-el="q-label"]')).toHaveText('118?')
+    await expect(caption(page)).toContainText('impossible')
+  })
+
+  test('loss function: MSE 30.17 for the default line, 1.67 for the best', async ({ page }) => {
+    await open(page, '/learning-basics/loss-function')
+    await goToStep(page, 4)
+    await expect(page.locator('[data-el="bar-mine-label"]')).toContainText('30.17')
+    await expect(page.locator('[data-el="worst-label"]')).toContainText('81')
+    await expect(page.locator('[data-el="bar-best-label"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="bar-best-label"]')).toContainText('1.67')
+    await page.getByRole('button', { name: 'One outlier' }).click()
+    await expect(page.locator('[data-el="worst-label"]')).toContainText('361')
+  })
+
+  test('maximum likelihood: the peak is at the mean, 3.4', async ({ page }) => {
+    await open(page, '/learning-basics/maximum-likelihood')
+    await goToStep(page, 3)
+    await expect(page.locator('[data-el="log"]')).toContainText('8.65')
+    await expect(page.locator('[data-el="peak"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 5)
+    await expect(page.locator('[data-el="peak"]')).toContainText('3.4')
+  })
+
+  test('cross-entropy: Paris 0.22; the right answer is not coloured before its step', async ({ page }) => {
+    await open(page, '/learning-basics/cross-entropy')
+    await goToStep(page, 0)
+    await expect(page.locator('[data-el="answer-mark"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 5)
+    await expect(page.locator('[data-el="loss-label"]')).toContainText('0.22')
+    await page.getByRole('button', { name: 'Wrong & confident' }).click()
+    await expect(page.locator('[data-el="loss-label"]')).toContainText('5.72')
+    await expect(caption(page)).toContainText('Confident and wrong')
+  })
+
+  test('overfitting: degree 7 memorises, degree 3 is best', async ({ page }) => {
+    await open(page, '/learning-basics/overfitting')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="train-err"]')).toContainText('0.0000')
+    await expect(page.locator('[data-el="test-err"]')).toContainText('3.20')
+    await expect(caption(page)).toContainText('Overfitting')
+    await page.getByRole('button', { name: 'Just right (3)' }).click()
+    await expect(caption(page)).toContainText('lowest test error')
+  })
+
+  test('regularization: λ = 10⁻³ cuts test error to 0.0309', async ({ page }) => {
+    await open(page, '/learning-basics/regularization')
+    await goToStep(page, 4)
+    await expect(page.locator('[data-el="test-err-new"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 7)
+    await expect(page.locator('[data-el="test-err-new"]')).toContainText('0.0309')
+    await page.getByRole('button', { name: 'Too strong (λ = 1)' }).click()
+    await expect(caption(page)).toContainText('too strong')
+  })
+
+  test('training curve: best epoch 23 when overfitting; the epoch slider reads values', async ({ page }) => {
+    await open(page, '/learning-basics/training-curve')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="best"]')).toContainText('epoch 23')
+    await expect(page.locator('[data-el="cur"]')).toContainText('epoch 45')
+    await page.getByRole('button', { name: 'Learning rate too high' }).click()
+    await expect(caption(page)).toContainText('learning rate that is too high')
   })
 })

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { curvePath, linear, tangentSegment } from '~/engine/plot'
+import { curvePath, frame, linear, polylinePath, tangentSegment } from '~/engine/plot'
 import { defaultsOf, type LogEntry, type ParamSchema, type Preset, type Readout, type TrackMeta } from '~/types/concept'
 
 /**
@@ -76,6 +76,12 @@ const parabola = curvePath((v) => v * v, psx, psy, 120)
 const tangent = computed(() => tangentSegment(tx.value, tx.value ** 2, 2 * tx.value, psx, psy))
 const tangentLabel = computed(() => ({ x: psx(tx.value), y: psy(tx.value ** 2) - 12, anchor: 'middle' as const }))
 
+// Batch 3 primitives: PlotAxes + ScatterPoints (a scatter plot) and a loss curve.
+const scatterFrame = frame({ x0: 40, x1: 190, y0: 30, y1: 250 }, [0, 7], [40, 100], 7, 3)
+const scatterPts = [1, 2, 3, 4, 5, 6].map((x, i) => ({ x, y: [51, 60, 64, 68, 77, 82][i]!, hue: (i % 2 ? 'rose' : 'blue') as 'rose' | 'blue', hollow: i % 2 === 1 }))
+const lossFrame = frame({ x0: 240, x1: 385, y0: 30, y1: 250 }, [0, 40], [0, 2.4], 4, 4)
+const lossPath = polylinePath(Array.from({ length: 41 }, (_, e) => [e, 0.1 + 2 * Math.exp(-e / 8)] as [number, number]), lossFrame.sx, lossFrame.sy)
+
 const metaDot = computed<TrackMeta>(() => ({ id: 'TRK-03', kind: 'SCALAR', name: 'w · x', hue: 'green', rows: [['value', String(dot.value)], ['sign', dot.value > 0 ? 'positive' : dot.value < 0 ? 'negative' : 'zero']] }))
 </script>
 
@@ -135,6 +141,16 @@ const metaDot = computed<TrackMeta>(() => ({ id: 'TRK-03', kind: 'SCALAR', name:
       <div class="card"><ParamPanel v-model="primValues" :schema="prim" /></div>
     </div>
 
+    <h2>Charts: axes, scatter points, loss curve</h2>
+    <section class="stage-demo charts" data-track-host>
+      <svg viewBox="0 0 400 300" class="svg short">
+        <PlotAxes el="pg-axes" :f="scatterFrame" x-label="hours" y-label="score" />
+        <ScatterPoints el="pg-pts" :points="scatterPts" :sx="scatterFrame.sx" :sy="scatterFrame.sy" />
+        <PlotAxes el="pg-loss-axes" :f="lossFrame" x-label="epoch" y-label="loss" />
+        <path data-el="pg-loss" :d="lossPath" fill="none" stroke="var(--c-blue)" stroke-width="2" />
+      </svg>
+    </section>
+
     <h2>Other controls</h2>
     <div class="card">
       <ParamPanel v-model="miscValues" :schema="misc" />
@@ -162,7 +178,8 @@ h2 { font-size: 15px; font-weight: 600; margin: 32px 0 10px; }
 .stage-demo { position: relative; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); min-height: 420px; overflow: hidden; }
 .svg { display: block; width: 100%; height: 420px; }
 .svg.short { height: 300px; }
-.stage-demo.prim { min-height: 300px; }
+.stage-demo.prim, .stage-demo.charts { min-height: 300px; }
+.stage-demo.charts { max-width: 680px; }
 .prim.hl-0 :deep([data-el="pg-A-row-0"]), .prim.hl-1 :deep([data-el="pg-A-row-1"]) { opacity: 1; }
 .panel-demo { border: 1px solid var(--line); border-radius: var(--radius-xl); max-height: 640px; }
 .card { max-width: 680px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-lg); }

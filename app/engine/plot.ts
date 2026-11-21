@@ -132,3 +132,33 @@ export function tangentSegment(x: number, y: number, slope: number, sx: Scale, s
   const [y0, y1] = [Math.min(...sy.range), Math.max(...sy.range)]
   return clipSegment([px - ux, py - uy], [px + ux, py + uy], { x0, x1, y0, y1 })
 }
+
+export interface Frame {
+  box: { x0: number; x1: number; y0: number; y1: number }
+  sx: Scale
+  sy: Scale
+  xTicks: number[]
+  yTicks: number[]
+}
+
+/** Scales and ticks for a chart drawn in `box` (SVG), y pointing up. */
+export function frame(
+  box: { x0: number; x1: number; y0: number; y1: number },
+  xDomain: [number, number],
+  yDomain: [number, number],
+  xCount = 5,
+  yCount = 4,
+): Frame {
+  return {
+    box,
+    sx: linear(xDomain, [box.x0, box.x1]),
+    sy: linear(yDomain, [box.y1, box.y0]),
+    xTicks: ticks(xDomain[0], xDomain[1], xCount),
+    yTicks: ticks(yDomain[0], yDomain[1], yCount),
+  }
+}
+
+/** SVG path through data points (a loss curve, a sampled function), coordinates rounded to 0.01. */
+export function polylinePath(points: [number, number][], sx: Scale, sy: Scale): string {
+  return points.map(([x, y], i) => `${i ? 'L' : 'M'}${sx(x).toFixed(2)} ${sy(y).toFixed(2)}`).join('')
+}

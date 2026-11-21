@@ -135,3 +135,10 @@ test('matrix grid highlights rows; the tangent line follows its point', async ({
   await page.keyboard.press('End')
   await expect(page.locator('[data-el="pg-tan-label"]')).toHaveText('slope 4.0')
 })
+
+test('chart primitives: axes with ticks, scatter points, a loss curve', async ({ page }) => {
+  await expect(page.locator('[data-el="pg-pts-pt-0"]')).toBeAttached()
+  await expect(page.locator('[data-el="pg-pts-pt-5"]')).toHaveClass(/hollow/)
+  await expect(page.locator('[data-el="pg-axes"] .tick').first()).toHaveText('0')
+  await expect(page.locator('[data-el="pg-loss"]')).toHaveAttribute('d', /^M/)
+})
