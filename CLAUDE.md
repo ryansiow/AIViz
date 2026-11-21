@@ -94,8 +94,12 @@ app/
     usePlayer.ts               Timeline player (play/pause/seek/next/prev/goToStep/speed, rebuild)
     beats.ts                   Animation building blocks (drawIn, fadeIn, riseIn, popIn, activate, …)
     gsap.ts                    getGsap(): registers DrawSVGPlugin once, client only
-    plane.ts                   2D plane geometry (toSvg, angles, arcs, arrowheads, label/card placement)
-    plot.ts                    Linear scales, 1/2/5 ticks, curvePath (edge-clipped), compact numbers
+    plane.ts                   2D plane geometry (toSvg, angles, arcs, arrowheads, label/card placement,
+                               fitPlane: auto scale + origin for a box, sideLabel: label beside a segment)
+    plot.ts                    Linear scales, 1/2/5 ticks, curvePath (edge-clipped), compact numbers,
+                               clipSegment, tangentSegment
+    matrix.ts                  gridLayout (cells, row/col highlights, brackets), 2×2 maths: matVec, det2,
+                               inverse2, column, classify2 (identity/rotation/shear/collapse…)
   components/                  Auto-imported by FILE NAME (pathPrefix: false), sub-folders are only organisation
     AppTopbar.vue, CurriculumSidebar.vue, ThemeToggle.vue, Tex.vue
     concept/                   ConceptStage, PlayerBar, ConceptPanel, ExplainView
@@ -104,6 +108,8 @@ app/
     panel/                     ValueReadouts, LogFeed
     stage/                     StageCaption, TrackOverlay
     plane/                     PlaneGrid, PlaneVector, AngleArc (reusable SVG primitives)
+    matrix/                    MatrixGrid (matrix or column vector as tinted cells; highlights start hidden)
+    plot/                      TangentLine (tangent through a point, from tangentSegment)
     explain/                   FormulaBlock, RevealPhrase, RevealHint, Term
   composables/useUi.ts         useSidebar, useTheme, useConceptView (?view=explain)
   composables/useReviewStatus.ts  What awaits the owner's review per concept: draft explainers + unreviewed visualisations (sidebar dots, topbar chip)
@@ -189,7 +195,13 @@ Rules:
 | `activate(ctx, els, at)` | Turn hover targets on | `autoAlpha 0 → 1` over 0.01 s (see gotchas). |
 | `vectorIn(ctx, el, at)` | Standard vector entrance | Line draws, head lands at 80%, label overlaps the end, hit area activated. |
 | `arcIn(ctx, el, at)` | Angle arc entrance | |
+| `dim(ctx, els, at, to=0.25)` | Step an element back so the next one has focus | Opacity 1 → `to`, `immediateRender: false`. |
+| `fadeOut(ctx, els, at)` | Turn a transient highlight off again | Opacity 1 → 0, `immediateRender: false`. |
 | `holdUntil(ctx, t)` | Reading time at the end | |
+
+All beats **skip an empty target list** (GSAP warns on empty targets), so optional elements (a zero vector rendered with `v-if`) need no guards in `build()`.
+
+**Shared SVG primitives, opt-in props:** `PlaneGrid` takes a box (`x0`, `y0`, `width`, `height`) and a grid `step`; `PlaneVector` takes `from` (tip-to-tail), `band` (wide translucent stroke for a vector drawn under another on the same line), `labelAt` and `halo` (background outline so labels stay readable over lines). Defaults keep Dot Product unchanged. Use `fitPlane()` when vectors can be large: it fits all points in a box and snaps the scale.
 
 Morphs (for example Softmax bars rescaling) are written inline with `tl.fromTo(el, {attr:{…from}}, {attr:{…to}, immediateRender: false}, at)`. **`immediateRender: false` is required** on any second tween of the same element, or its start state overwrites the first tween's.
 
@@ -280,7 +292,7 @@ The visual direction is **locked**: `design/concept-page-mock.html` (v2), a ligh
 7. **Visual check** at steps 1, mid and last, in light and dark, with the extreme presets. Look for label/curve/tick collisions, clipped content, and "spoilers" (the answer shown before its step).
 8. Run the full definition of done (§3).
 
-Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free card placement), `transformers-llms/softmax` (bars and in-place morphs), `optimisation/gradient-descent` (curves, iterative runs, variable-length timelines, off-chart handling).
+Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free card placement), `foundations/vectors` (auto-fitted plane, tip-to-tail, a list "ledger" beside the plane), `foundations/matrix-multiplication` (MatrixGrid with row/column highlights + a transformed grid), `foundations/derivatives-chain-rule` (two linked plots, tangent lines, nudge triangles with room-aware labels), `transformers-llms/softmax` (bars and in-place morphs), `optimisation/gradient-descent` (curves, iterative runs, variable-length timelines, off-chart handling).
 
 ---
 
@@ -305,6 +317,11 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 17. **Hydration mismatches from floating point:** `exp`/`log` can differ in the last bit between Node (server) and Chrome, so a computed SVG attribute (e.g. a bar width) mismatches on hydration. Round geometry in `derive` (Temperature and Learning Rate use 1/1000 of a unit).
 18. **Rounding for display:** `toFixed` rounds the binary value (7.175 → "7.17"). For numbers a learner may check by hand, use `roundTo()` from `utils/math` (7.175 → 7.18).
 19. **Hide-until-step on a second property:** an element whose width morphs (first tween) and which must stay hidden until its step needs its opacity tween to render its start state at build time (no `immediateRender: false`; different property, so gotcha 5 does not apply). Otherwise it shows from step 1 and spoils the answer.
+20. **Class colour helpers hit every element that carries them.** A rect with `class="box blue"` also gets `.blue { fill }`. Give shape rules higher specificity (`.box.blue { fill: … }`).
+21. **Cosines of parallel integer vectors:** `a·b / (|a||b|)` gives 0.9999999999999998. Use `a·b / √(|a|²|b|²)` (one square root), which is exact for integer inputs.
+22. **Caption line breaks:** `renderInlineTex` glues punctuation that follows maths (`$x$,`) into a no-wrap span, so a line never starts with a comma. Keep punctuation directly after the closing `$`.
+23. **Rounded factors must multiply to the rounded product.** When a caption shows `a × b = c`, round `a`, `b` and `c` to enough digits (3 for slopes) that a learner's check works (0.2 × 2 ≠ 0.39; 0.197 × 2 = 0.393).
+24. **The sidebar only expands the current chapter.** An e2e test that looks up a sidebar item must visit a page in that item's chapter.
 
 ---
 
@@ -314,7 +331,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 - **Unit, content:** `explain-content.test.ts` reads `content/explain/` with Node `fs`: paths match the curriculum, front matter is valid, ready concepts have an explainer, hues are semantic, `$` delimiters balance.
 - **E2E (Playwright):** specs by area: `navigation`, `theme`, `sidebar` (+ `.mobile`), `components` (playground controls), `concept-player` (engine behaviour on Dot Product), `concepts` (per-concept stories + smoke for every ready concept), `explain` (every explainer renders without KaTeX errors, reveals, draft dot and chip), `concept-page.mobile`. Prefer roles and accessible names; use `data-el` for diagram parts; drive the timeline with `window.__aiviz`.
 - Flakiness budget is zero: run `--repeat-each=3` after changing timing, hover or player code.
-- Current counts (Phase 6, Batch 1): **95 unit tests, 78 e2e tests**, all passing.
+- Current counts (Phase 6, Batch 2): **137 unit tests, 96 e2e tests**, all passing (288/288 over `--repeat-each=3`).
 
 ---
 
@@ -340,20 +357,20 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 | 3 | GSAP engine (module contract, player, beats, plane primitives) + **Dot Product** | ✅ Merged (PR #2) |
 | 4 | Vertical slice: **Softmax** (+ temperature) and **Gradient Descent** (+ learning rate); plot helpers; step-preserving rebuilds | ✅ Merged (PR #3) |
 | 5 | **Explain content:** Nuxt Content v3, one Markdown file per concept, KaTeX maths, MDC terms and reveals, draft flag (amber dot + "In draft" chip). 9 draft explainers | ✅ On `main` (direct commit); explainers await owner review |
-| 6 | **Build out the curriculum** in batches, each first building the primitive it needs (§11.1) | ⏳ In progress: Batch 1 done |
+| 6 | **Build out the curriculum** in batches, each first building the primitive it needs (§11.1) | ⏳ In progress: Batches 1–2 done |
 | 7 | **Quality bar:** keyboard and a11y pass, reduced-motion review, contrast, tablet layout, progress tracking (localStorage; the sidebar dots already support `ready`), worst-case data (break-ui), motion audit (improve-animations) | Planned |
 | — | Hosting (static: Cloudflare Pages or Vercel) | Deferred until the owner approves |
 | — | **GitHub Issues as the work queue:** the owner will file Issues; Claude fetches them daily (`gh issue list`) and works on them, committing locally (no push, see §10) | Planned, not set up yet |
 
-Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent` (reviewed), `transformers-llms/temperature`, `optimisation/learning-rate` (Phase 6 Batch 1, **awaiting review**). All other 36 concepts have a placeholder stage.
+Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent` (reviewed); `transformers-llms/temperature`, `optimisation/learning-rate` (Batch 1) and `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `foundations/derivatives-chain-rule` (Batch 2), all **awaiting review**. All other 32 concepts have a placeholder stage. The whole Foundations chapter is ready.
 
 ### 11.1 Phase 6 batches
 
 | Batch | Concepts | New primitive | Status |
 |---|---|---|---|
 | 1 | Temperature, Learning Rate (variants of Softmax / Gradient Descent) | none (`roundTo` helper) | ✅ Built, awaiting review |
-| 2 | Vectors, Cosine Similarity, Matrix Multiplication, Derivatives & Chain Rule | MatrixGrid; TangentLine helper | Next |
-| 3 | Learning Basics (7) | ScatterPlot, loss-curve plot | Planned |
+| 2 | Vectors, Cosine Similarity, Matrix Multiplication, Derivatives & Chain Rule | MatrixGrid; TangentLine (+ fitPlane, sideLabel, clipSegment) | ✅ Built, awaiting review |
+| 3 | Learning Basics (7) | ScatterPlot, loss-curve plot | Next |
 | 4 | Neural Networks (8) | NetworkGraph (forward values, backward gradients) | Planned |
 | 5 | Optimisation: SGD, Adam, Early Stopping, Hyperparameter Tuning | ContourPlot | Planned |
 | 6 | Transformers & LLMs (7 left) | TokenStrip, Heatmap | Planned |
@@ -361,11 +378,13 @@ Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimis
 
 Each primitive: geometry in `engine/` with unit tests, an SVG component, and a `/dev/components` entry before a concept uses it. At the end of each batch: `dataviz` and `break-ui` passes, CLAUDE.md update.
 
-Explainers (all `draft: true`, awaiting review): the 3 ready concepts plus `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `learning-basics/loss-function`, `optimisation/learning-rate`, `transformers-llms/temperature`. The other 32 concepts show the "not written yet" note.
+Explainers (`draft: true`, awaiting review): Softmax and Gradient Descent, all 6 Batch 1–2 concepts (Derivatives & Chain Rule is new in Batch 2), and `learning-basics/loss-function`. Dot Product's explainer has been reviewed by the owner (`draft: false`). The other 31 concepts show the "not written yet" note.
 
 ### Known gaps / small debts
 
 - Dot Product: the `proj_w(x)` label can overlap x when x lies along w.
+- Phones: the caption overlays the bottom of the stage and can hide x-axis tick labels (Chain Rule plots, Gradient Descent). Same root cause for all concepts; fix in Phase 7 (tablet/phone layout).
+- Matrix Multiplication: the `c₁`/`c₂` labels use Unicode subscripts in the math font, which sit a little low; vectors along the same line (e.g. `c₂` and `x` in the default) crowd each other.
 - `npm audit`: Nuxt Content brings `zod@3` (2 high advisories), used at build time only; the fix needs breaking `--force` upgrades. The other 12 advisories predate Phase 5.
 - Progress tracking (seen / finished) is not implemented yet.
 
