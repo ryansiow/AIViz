@@ -106,7 +106,7 @@ app/
     plane/                     PlaneGrid, PlaneVector, AngleArc (reusable SVG primitives)
     explain/                   FormulaBlock, RevealPhrase, RevealHint, Term
   composables/useUi.ts         useSidebar, useTheme, useConceptView (?view=explain)
-  composables/useExplainIndex.ts  Which concepts have an explainer and which are drafts (sidebar dots, topbar chip)
+  composables/useReviewStatus.ts  What awaits the owner's review per concept: draft explainers + unreviewed visualisations (sidebar dots, topbar chip)
   utils/explain.ts             explainPath() / parseExplainPath(): curriculum slugs <-> content paths
   plugins/track.ts             v-track directive (hover tracking overlay)
   plugins/hydrated.client.ts   Sets <html data-hydrated="true"> once hydrated (test hook)
@@ -163,7 +163,9 @@ Rules:
 - **The scene renders the FINAL state** of every element, from `D`. Every element that animates gets `data-el="<name>"` (unique, or indexed like `exp-bar-2`).
 - **`build()` only animates appearance**: draw, fade, rise, pop, grow from zero, morph from a previous value to the rendered one. Use `ctx.el(name)` to select. Call `ctx.step(id, time)` once per `StepDef`, **in order**; in dev a warning is logged if the labels do not match `steps`.
 - Every `build()` should end with `holdUntil(ctx, t)`, so the last step has reading time.
-- Register the module in `concepts/registry.ts` **and** set `status: 'ready'` in `curriculum.ts`. A unit test enforces that these match.
+- Register the module in `concepts/registry.ts` **and** set `status: 'ready'` in `curriculum.ts`. A unit test enforces that these match. New visualisations stay `reviewed: false` (the default) until the owner reviews them; only the owner's go-ahead sets `{ reviewed: true }`.
+- **Steps:** as many as the concept needs to be explained well (owner's rule): 4–9 is typical, longer is fine when each step teaches one thing.
+- **Variants:** a concept can reuse another's maths (`import { softmax } from '../softmax/derive'`, `descend`/`classify` from Gradient Descent) and tell its own story with its own scene and steps (Temperature, Learning Rate).
 
 ### 5.3 The player (`engine/usePlayer.ts`)
 
@@ -208,7 +210,9 @@ Morphs (for example Softmax bars rescaling) are written inline with `tl.fromTo(e
 
 - One file per concept: `content/explain/<chapter>/<concept>.md`. **The file path is the link** to the curriculum (`explainPath()`); a unit test checks every file matches a real concept and that every `ready` concept has one.
 - Front matter: `title` (must equal the curriculum title), `draft` (boolean), `updated` (YYYY-MM-DD). Do not write a `# H1`: the page renders the title. Start with a short intro paragraph, then `## sections`.
-- **`draft: true`** = written by Claude, not yet reviewed by the owner. It shows an amber sidebar dot (filled if the concept is `ready`, a ring if `planned`) and an **"In draft"** chip after the concept name in the topbar (kept visible on phones). The owner flips it to `false` after review. **Anything Claude writes or substantially rewrites is `draft: true`.**
+- **`draft: true`** = written by Claude, not yet reviewed by the owner. The owner flips it to `false` after review. **Anything Claude writes or substantially rewrites is `draft: true`.**
+- **Review markers** (`useReviewStatus`): a concept is "in draft" when its explainer is `draft: true` **or** its visualisation is `ready` but not `reviewed` (curriculum). It shows an amber sidebar dot (filled if `ready`, a ring if `planned`) and an **"In draft"** chip after the concept name in the topbar (kept visible on phones); the chip's tooltip says which part awaits review.
+- **Text-first concepts** (`format: 'text'` in the curriculum: Universal Approximation, Hyperparameter Tuning, Context Window, LLM Training Pipeline, ELBO) get a written explainer with one simple diagram instead of a long animation.
 - Writing syntax:
   - Maths: `$…$` inline, `$$…$$` display (rendered at build time by `rehype-katex`; display maths gets the formula-card style).
   - Coloured term: `:term[$\mathbf{w}$]{hue="blue"}` or `:term[projection]{hue="green"}`. Hues follow §6.
@@ -268,8 +272,8 @@ The visual direction is **locked**: `design/concept-page-mock.html` (v2), a ligh
 2. Create `app/concepts/<chapter>/<concept>/`:
    - `derive.ts`: `params` (`satisfies ParamSchema`), layout constants (`VIEW`, plot box…), a `Data` interface, and a pure `derive()`. Compute *all* geometry here. Use `engine/plane.ts` for 2D vectors and `engine/plot.ts` for curves and charts.
    - `Scene.vue`: render the final state from `d`. Add `data-el` names, `v-track` metadata, hit elements, token-based colours, math fonts.
-   - `index.ts`: `defineConcept({...})` with 4–7 steps (captions with `$…$`, log lines), readouts, formula, 2–4 presets that each tell a *different story*, and `build()` using the beats.
-3. Register it in `app/concepts/registry.ts` and set `status: 'ready'` in the curriculum. Add the module path to the `vi.mock` list in `tests/unit/registry.test.ts`.
+   - `index.ts`: `defineConcept({...})` with as many steps as the story needs (captions with `$…$`, log lines), readouts, formula, 2–4 presets that each tell a *different story*, and `build()` using the beats.
+3. Register it in `app/concepts/registry.ts` and set `status: 'ready'` in the curriculum (leave `reviewed` unset: it shows as in draft until the owner reviews it). Add the module path to the `vi.mock` list in `tests/unit/registry.test.ts`.
 4. **Unit tests** (`tests/unit/<concept>.test.ts`): the worked example's numbers, invariants (probabilities sum to 1, derivative matches a finite difference…), each preset's outcome, and edge cases (zero, parallel, overflow, off-chart).
 5. **E2E tests:** add the path to the smoke list in `tests/e2e/concepts.spec.ts` (plays every step, no console errors) and to `concept-page.mobile.spec.ts`. Add concept-specific tests for the caption and values at the final step, and for presets.
 6. **Explainer:** write or update `content/explain/<chapter>/<concept>.md` (§5.7) with `draft: true`, and add the path to `EXPLAINED` in `tests/e2e/explain.spec.ts`.
@@ -298,6 +302,9 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 14. **Reveal phrases are `inline-block`.** As plain inline spans, parts of a reveal holding KaTeX did not receive clicks (the paragraph caught them). Keep `display: inline-block`.
 15. **Content in a static build:** any `queryCollection` that runs only on the client (not during prerender) makes the browser download the content database. Load content in the page's SSR path so it lands in `_payload.json`.
 16. **E2E on the dev server:** the Nuxt devtools button sits at the bottom centre of the viewport and intercepts clicks there. Scroll targets away from it, or check hit-tests with that in mind.
+17. **Hydration mismatches from floating point:** `exp`/`log` can differ in the last bit between Node (server) and Chrome, so a computed SVG attribute (e.g. a bar width) mismatches on hydration. Round geometry in `derive` (Temperature and Learning Rate use 1/1000 of a unit).
+18. **Rounding for display:** `toFixed` rounds the binary value (7.175 → "7.17"). For numbers a learner may check by hand, use `roundTo()` from `utils/math` (7.175 → 7.18).
+19. **Hide-until-step on a second property:** an element whose width morphs (first tween) and which must stay hidden until its step needs its opacity tween to render its start state at build time (no `immediateRender: false`; different property, so gotcha 5 does not apply). Otherwise it shows from step 1 and spoils the answer.
 
 ---
 
@@ -307,7 +314,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 - **Unit, content:** `explain-content.test.ts` reads `content/explain/` with Node `fs`: paths match the curriculum, front matter is valid, ready concepts have an explainer, hues are semantic, `$` delimiters balance.
 - **E2E (Playwright):** specs by area: `navigation`, `theme`, `sidebar` (+ `.mobile`), `components` (playground controls), `concept-player` (engine behaviour on Dot Product), `concepts` (per-concept stories + smoke for every ready concept), `explain` (every explainer renders without KaTeX errors, reveals, draft dot and chip), `concept-page.mobile`. Prefer roles and accessible names; use `data-el` for diagram parts; drive the timeline with `window.__aiviz`.
 - Flakiness budget is zero: run `--repeat-each=3` after changing timing, hover or player code.
-- Current counts (end of Phase 5): **73 unit tests, 68 e2e tests**, all passing.
+- Current counts (Phase 6, Batch 1): **95 unit tests, 78 e2e tests**, all passing.
 
 ---
 
@@ -333,12 +340,26 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 | 3 | GSAP engine (module contract, player, beats, plane primitives) + **Dot Product** | ✅ Merged (PR #2) |
 | 4 | Vertical slice: **Softmax** (+ temperature) and **Gradient Descent** (+ learning rate); plot helpers; step-preserving rebuilds | ✅ Merged (PR #3) |
 | 5 | **Explain content:** Nuxt Content v3, one Markdown file per concept, KaTeX maths, MDC terms and reveals, draft flag (amber dot + "In draft" chip). 9 draft explainers | ✅ On `main` (direct commit); explainers await owner review |
-| 6 | **Build out the curriculum:** 1–2 concepts per week, chapter by chapter, using the §7 checklist. Temperature and Learning Rate can reuse the Softmax / Gradient Descent modules with their own step emphasis | Planned |
+| 6 | **Build out the curriculum** in batches, each first building the primitive it needs (§11.1) | ⏳ In progress: Batch 1 done |
 | 7 | **Quality bar:** keyboard and a11y pass, reduced-motion review, contrast, tablet layout, progress tracking (localStorage; the sidebar dots already support `ready`), worst-case data (break-ui), motion audit (improve-animations) | Planned |
 | — | Hosting (static: Cloudflare Pages or Vercel) | Deferred until the owner approves |
 | — | **GitHub Issues as the work queue:** the owner will file Issues; Claude fetches them daily (`gh issue list`) and works on them, committing locally (no push, see §10) | Planned, not set up yet |
 
-Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent`. All other 38 concepts have a placeholder stage.
+Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent` (reviewed), `transformers-llms/temperature`, `optimisation/learning-rate` (Phase 6 Batch 1, **awaiting review**). All other 36 concepts have a placeholder stage.
+
+### 11.1 Phase 6 batches
+
+| Batch | Concepts | New primitive | Status |
+|---|---|---|---|
+| 1 | Temperature, Learning Rate (variants of Softmax / Gradient Descent) | none (`roundTo` helper) | ✅ Built, awaiting review |
+| 2 | Vectors, Cosine Similarity, Matrix Multiplication, Derivatives & Chain Rule | MatrixGrid; TangentLine helper | Next |
+| 3 | Learning Basics (7) | ScatterPlot, loss-curve plot | Planned |
+| 4 | Neural Networks (8) | NetworkGraph (forward values, backward gradients) | Planned |
+| 5 | Optimisation: SGD, Adam, Early Stopping, Hyperparameter Tuning | ContourPlot | Planned |
+| 6 | Transformers & LLMs (7 left) | TokenStrip, Heatmap | Planned |
+| 7 | Generative Models (6) | Histogram/density, encoder–decoder diagram | Planned |
+
+Each primitive: geometry in `engine/` with unit tests, an SVG component, and a `/dev/components` entry before a concept uses it. At the end of each batch: `dataviz` and `break-ui` passes, CLAUDE.md update.
 
 Explainers (all `draft: true`, awaiting review): the 3 ready concepts plus `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `learning-basics/loss-function`, `optimisation/learning-rate`, `transformers-llms/temperature`. The other 32 concepts show the "not written yet" note.
 
