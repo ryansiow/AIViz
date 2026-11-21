@@ -10,6 +10,8 @@ export const conceptLoaders: Record<string, () => Promise<{ default: AnyConceptM
   'foundations/dot-product': () => import('./foundations/dot-product'),
   'transformers-llms/softmax': () => import('./transformers-llms/softmax'),
   'optimisation/gradient-descent': () => import('./optimisation/gradient-descent'),
+  'optimisation/learning-rate': () => import('./optimisation/learning-rate'),
+  'transformers-llms/temperature': () => import('./transformers-llms/temperature'),
 }
 
 export const hasConcept = (chapter: string, concept: string) => `${chapter}/${concept}` in conceptLoaders

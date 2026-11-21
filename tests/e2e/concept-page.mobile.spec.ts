@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { visit } from './helpers'
 
 /** A live concept page at phone width. */
-for (const path of ['/foundations/dot-product', '/transformers-llms/softmax', '/optimisation/gradient-descent']) {
+for (const path of ['/foundations/dot-product', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
   test(`${path} works at phone width`, async ({ page }) => {
     await visit(page, path)
     await page.locator('svg.scene.ready').waitFor()

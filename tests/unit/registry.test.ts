@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('~/concepts/foundations/dot-product', () => ({ default: {} }))
 vi.mock('~/concepts/transformers-llms/softmax', () => ({ default: {} }))
 vi.mock('~/concepts/optimisation/gradient-descent', () => ({ default: {} }))
+vi.mock('~/concepts/optimisation/learning-rate', () => ({ default: {} }))
+vi.mock('~/concepts/transformers-llms/temperature', () => ({ default: {} }))
 
 const { conceptLoaders } = await import('~/concepts/registry')
 const { curriculum } = await import('~/data/curriculum')

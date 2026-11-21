@@ -52,3 +52,15 @@ describe('renderInlineTex', () => {
     expect(renderInlineTex('costs $5')).toBe('costs $5')
   })
 })
+
+describe('roundTo', () => {
+  it('rounds decimal halves up, like on paper', async () => {
+    const { roundTo } = await import('~/utils/math')
+    expect(roundTo(2.05 * 3.5)).toBe(7.18)
+    expect(roundTo(1.005)).toBe(1.01)
+    expect(roundTo(-7.175)).toBe(-7.18)
+    expect(roundTo(0.1 + 0.2)).toBe(0.3)
+    expect(roundTo(5, 0)).toBe(5)
+    expect(roundTo(Infinity)).toBe(Infinity)
+  })
+})

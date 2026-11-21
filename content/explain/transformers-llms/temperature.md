@@ -42,6 +42,14 @@ $$
 
 Dividing by a small $T$ makes the exponent large, so the ratio explodes. Dividing by a large $T$ pulls it towards :reveal[$1$], where every token is equally likely.
 
+## Try it
+
+- **Greedy-ish ($T = 0.2$)**: almost all 20 samples are "Paris". The spread meter drops close to :reveal[0 bits].
+- **Hot ($T = 2.5$)**: "banana" starts to appear in the samples. The favourite still leads, but by much less.
+- **Open-ended prompt**: for "The old house was …" the model has several good options already. A little extra temperature makes them :reveal[almost equally likely].
+
+The outlines always show the $T = 1$ distribution, so you can see exactly what temperature changed.
+
 ## Choosing a temperature
 
 - **Low** for tasks with one right answer, such as extraction, code or factual questions: you want the most likely token.

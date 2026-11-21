@@ -5,15 +5,25 @@
  * `status` says whether a concept's visualisation is built yet:
  *   - 'ready'   → has an interactive visualisation
  *   - 'planned' → page exists (Explain text may follow), visualisation not built yet
+ *
+ * `reviewed` (ready concepts only): the owner has reviewed the visualisation.
+ * New visualisations ship unreviewed and show the amber "In draft" markers.
+ *
+ * `format`: 'animation' (default) is a full stepped animation. 'text' marks a
+ * text-first concept: a written explainer with one simple diagram, because a
+ * long animation would not teach it better.
  */
 
 export type ConceptStatus = 'ready' | 'planned'
+export type ConceptFormat = 'animation' | 'text'
 
 export interface Concept {
   slug: string
   title: string
   summary: string
   status: ConceptStatus
+  reviewed: boolean
+  format: ConceptFormat
 }
 
 export interface Chapter {
@@ -23,11 +33,19 @@ export interface Chapter {
   concepts: Concept[]
 }
 
-const c = (slug: string, title: string, summary: string, status: ConceptStatus = 'planned'): Concept => ({
+const c = (
+  slug: string,
+  title: string,
+  summary: string,
+  status: ConceptStatus = 'planned',
+  extra: Partial<Pick<Concept, 'reviewed' | 'format'>> = {},
+): Concept => ({
   slug,
   title,
   summary,
   status,
+  reviewed: extra.reviewed ?? false,
+  format: extra.format ?? 'animation',
 })
 
 export const curriculum: Chapter[] = [
@@ -37,7 +55,7 @@ export const curriculum: Chapter[] = [
     blurb: 'The vector and calculus toolkit every model is built from.',
     concepts: [
       c('vectors', 'Vectors', 'Arrows with direction and length; lists of numbers.'),
-      c('dot-product', 'Dot Product', 'One number that says how much two vectors align.', 'ready'),
+      c('dot-product', 'Dot Product', 'One number that says how much two vectors align.', 'ready', { reviewed: true }),
       c('cosine-similarity', 'Cosine Similarity', 'Compare direction, ignore length.'),
       c('matrix-multiplication', 'Matrix Multiplication', 'Many dot products at once.'),
       c('derivatives-chain-rule', 'Derivatives & Chain Rule', 'How a change flows through composed functions.'),
@@ -66,7 +84,7 @@ export const curriculum: Chapter[] = [
       c('activation-functions', 'Activation Functions', 'Sigmoid, tanh, ReLU and why they matter.'),
       c('dense-layer', 'Dense Layer', 'Matrix multiply, add bias, activate.'),
       c('multilayer-perceptron', 'Multilayer Perceptron', 'Stacked dense layers.'),
-      c('universal-approximation', 'Universal Approximation', 'Why wide networks can fit any function.'),
+      c('universal-approximation', 'Universal Approximation', 'Why wide networks can fit any function.', 'planned', { format: 'text' }),
       c('backpropagation', 'Backpropagation', 'The chain rule, run backwards.'),
       c('vanishing-gradients', 'Vanishing & Exploding Gradients', 'When products of derivatives shrink or blow up.'),
       c('dropout', 'Dropout', 'Randomly switch neurons off while training.'),
@@ -77,12 +95,12 @@ export const curriculum: Chapter[] = [
     title: 'Optimisation',
     blurb: 'How parameters move towards a lower loss.',
     concepts: [
-      c('gradient-descent', 'Gradient Descent', 'Step downhill against the gradient.', 'ready'),
-      c('learning-rate', 'Learning Rate', 'The step size, and the most important knob.'),
+      c('gradient-descent', 'Gradient Descent', 'Step downhill against the gradient.', 'ready', { reviewed: true }),
+      c('learning-rate', 'Learning Rate', 'The step size, and the most important knob.', 'ready'),
       c('stochastic-gradient-descent', 'Stochastic Gradient Descent', 'Noisy steps from mini-batches.'),
       c('adam', 'Adam', 'Momentum plus per-parameter step sizes.'),
       c('early-stopping', 'Early Stopping', 'Keep the checkpoint with the lowest validation loss.'),
-      c('hyperparameter-tuning', 'Hyperparameter Tuning', 'Train, validate, test and search.'),
+      c('hyperparameter-tuning', 'Hyperparameter Tuning', 'Train, validate, test and search.', 'planned', { format: 'text' }),
     ],
   },
   {
@@ -92,13 +110,13 @@ export const curriculum: Chapter[] = [
     concepts: [
       c('tokenization', 'Tokenization', 'Splitting text into tokens.'),
       c('embeddings', 'Embeddings', 'Meaning as a position in space.'),
-      c('softmax', 'Softmax', 'Turn scores into probabilities.', 'ready'),
-      c('temperature', 'Temperature', 'Sharpen or flatten next-token sampling.'),
+      c('softmax', 'Softmax', 'Turn scores into probabilities.', 'ready', { reviewed: true }),
+      c('temperature', 'Temperature', 'Sharpen or flatten next-token sampling.', 'ready'),
       c('attention', 'Attention', 'Every token weighs every other token.'),
       c('multi-head-attention', 'Multi-Head Attention', 'Several attention patterns in parallel.'),
       c('transformer-block', 'Transformer Block', 'Attention plus a feed-forward network.'),
-      c('context-window', 'Context Window', 'How many tokens the model can see.'),
-      c('llm-training-pipeline', 'LLM Training Pipeline', 'Pre-training, fine-tuning and RLHF.'),
+      c('context-window', 'Context Window', 'How many tokens the model can see.', 'planned', { format: 'text' }),
+      c('llm-training-pipeline', 'LLM Training Pipeline', 'Pre-training, fine-tuning and RLHF.', 'planned', { format: 'text' }),
     ],
   },
   {
@@ -111,7 +129,7 @@ export const curriculum: Chapter[] = [
       c('latent-space', 'Latent Space', 'The low-dimensional space data is generated from.'),
       c('kl-divergence', 'KL Divergence', 'How far one distribution is from another.'),
       c('variational-autoencoder', 'Variational Autoencoder', 'Encoders that output distributions.'),
-      c('elbo', 'ELBO', 'A tractable lower bound on the likelihood.'),
+      c('elbo', 'ELBO', 'A tractable lower bound on the likelihood.', 'planned', { format: 'text' }),
     ],
   },
 ]

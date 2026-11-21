@@ -36,3 +36,14 @@ export function renderInlineTex(text: string): string {
     })
     .join('')
 }
+
+/**
+ * Rounds to `digits` decimals the way a person would on paper: 7.175 → 7.18.
+ * (toFixed works on the binary value, and 7.175 is stored as 7.17499…, so it gives 7.17.)
+ */
+export function roundTo(v: number, digits = 2): number {
+  if (!Number.isFinite(v)) return v
+  const clean = Number(v.toPrecision(12))
+  const shifted = Math.round(Math.abs(Number(`${clean}e${digits}`)))
+  return Math.sign(clean) * Number(`${shifted}e-${digits}`)
+}

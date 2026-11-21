@@ -57,3 +57,22 @@ describe('lookups', () => {
     expect(findConcept('optimisation', 'dot-product')).toBeUndefined()
   })
 })
+
+describe('review and format flags', () => {
+  const all = curriculum.flatMap((ch) => ch.concepts)
+
+  it('only marks ready concepts as reviewed', () => {
+    for (const c of all) if (c.reviewed) expect(c.status, c.slug).toBe('ready')
+  })
+
+  it('keeps the three concepts merged before Phase 6 reviewed', () => {
+    for (const [ch, co] of [['foundations', 'dot-product'], ['transformers-llms', 'softmax'], ['optimisation', 'gradient-descent']] as const) {
+      expect(findConcept(ch, co)!.concept.reviewed, co).toBe(true)
+    }
+  })
+
+  it('marks the text-first concepts', () => {
+    const text = all.filter((c) => c.format === 'text').map((c) => c.slug).sort()
+    expect(text).toEqual(['context-window', 'elbo', 'hyperparameter-tuning', 'llm-training-pipeline', 'universal-approximation'])
+  })
+})

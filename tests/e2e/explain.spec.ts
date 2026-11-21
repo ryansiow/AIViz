@@ -69,7 +69,8 @@ test.describe('draft flag', () => {
   test('a draft explainer shows an "In draft" chip after the concept name', async ({ page }) => {
     await visit(page, '/foundations/dot-product')
     const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' })
-    await expect(crumbs.locator('.draft-chip')).toHaveText('In draft')
+    await expect(crumbs.locator('.draft-chip')).toContainText('In draft')
+    await expect(crumbs.locator('.draft-chip')).toHaveAttribute('title', 'Explainer is a first draft, not reviewed yet')
   })
 
   test('no chip for a concept without an explainer', async ({ page }) => {
@@ -77,17 +78,17 @@ test.describe('draft flag', () => {
     await expect(page.locator('.draft-chip')).toHaveCount(0)
   })
 
-  test('the sidebar marks draft explainers with an amber dot', async ({ page }) => {
+  test("the sidebar marks items awaiting review with an amber dot", async ({ page }) => {
     await visit(page, '/foundations/dot-product')
     const sidebar = page.getByRole('navigation', { name: 'Curriculum' })
     const dot = (name: string) => sidebar.getByRole('link', { name }).locator('.dot')
 
     // Ready + draft: filled amber. Planned + draft: amber ring. No explainer: unchanged.
-    await expect(dot('Dot Product (explainer in draft)')).toHaveClass(/\bready\b.*\bdraft\b/)
-    await expect(dot('Vectors (explainer in draft)')).toHaveClass(/\bplanned\b.*\bdraft\b/)
+    await expect(dot('Dot Product (in draft)')).toHaveClass(/\bready\b.*\bdraft\b/)
+    await expect(dot('Vectors (in draft)')).toHaveClass(/\bplanned\b.*\bdraft\b/)
     await expect(dot('Derivatives & Chain Rule')).not.toHaveClass(/\bdraft\b/)
 
-    const fill = await dot('Dot Product (explainer in draft)').evaluate((el) => getComputedStyle(el).backgroundColor)
+    const fill = await dot('Dot Product (in draft)').evaluate((el) => getComputedStyle(el).backgroundColor)
     const amber = await page.evaluate(() => {
       const probe = document.createElement('span')
       probe.style.color = 'var(--c-amber)'
@@ -106,4 +107,13 @@ test('moving between explainers keeps the Explain view and loads the next one', 
   await expect(page).toHaveURL('/foundations/cosine-similarity?view=explain')
   await expect(page.locator('.explain h1')).toHaveText('Cosine Similarity')
   await expect(prose(page)).toContainText('compares their direction only')
+})
+
+test('a new, unreviewed visualisation is flagged even when its explainer is reviewed', async ({ page }) => {
+  // Temperature: visualisation unreviewed (and explainer draft) → the chip names both.
+  await visit(page, '/transformers-llms/temperature')
+  await expect(page.locator('.draft-chip')).toHaveAttribute('title', 'Visualisation and explainer not reviewed yet')
+  // Softmax: visualisation reviewed, explainer draft → explainer only.
+  await visit(page, '/transformers-llms/softmax')
+  await expect(page.locator('.draft-chip')).toHaveAttribute('title', 'Explainer is a first draft, not reviewed yet')
 })

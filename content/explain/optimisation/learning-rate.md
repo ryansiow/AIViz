@@ -27,6 +27,14 @@ On the Gradient Descent bowl, $L(\theta) = \tfrac12(\theta - 1)^2 + \tfrac12$, e
 
 The rule for this bowl: converge if $0 < \eta < 2$, and :reveal[diverge if $\eta > 2$]. At exactly $\eta = 1$ it lands on the bottom in one step.
 
+## Try it
+
+The visualisation runs three learning rates side by side on this same bowl.
+
+- **Small · right · large** ($0.1$, $0.7$, $2.05$): it crawls, settles, and blows up.
+- **Around 1** ($0.5$, $1$, $1.5$): $\eta = 1$ lands on the bottom in :reveal[one step]; $1.5$ overshoots but still closes in.
+- **The edge at 2** ($1.9$, $2$, $2.1$): at exactly $\eta = 2$ the factor is $-1$, so the run :reveal[bounces between the same two points forever].
+
 ## Why steep curves need small steps
 
 The safe range depends on how sharply the loss curves. A steeper, narrower valley has a lower limit: for a bowl with curvature $c$, steps stay stable only while $\eta < 2/c$. Real models have many directions with different curvatures, and :reveal[the sharpest one] sets the limit for all of them.

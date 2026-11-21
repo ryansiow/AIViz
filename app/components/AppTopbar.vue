@@ -4,7 +4,10 @@ import { findChapter, findConcept } from '~/data/curriculum'
 const route = useRoute()
 const { toggle: toggleSidebar, open } = useSidebar()
 const { view, setView } = useConceptView()
-const { isDraft } = useExplainIndex()
+const { status: review, describe } = useReviewStatus()
+const draftNote = computed(() =>
+  chapterSlug.value && conceptSlug.value && concept.value ? describe(review(chapterSlug.value, conceptSlug.value)) : '',
+)
 
 const chapterSlug = computed(() => route.params.chapter as string | undefined)
 const conceptSlug = computed(() => route.params.concept as string | undefined)
@@ -34,11 +37,7 @@ const concept = computed(() =>
       <template v-if="concept">
         <span aria-hidden="true">›</span>
         <b>{{ concept.title }}</b>
-        <span
-          v-if="isDraft(chapterSlug!, conceptSlug!)"
-          class="draft-chip"
-          title="The explainer is a first draft, not yet reviewed"
-        >In draft</span>
+        <span v-if="draftNote" class="draft-chip" :title="draftNote">In draft<span class="sr-only">: {{ draftNote }}</span></span>
       </template>
     </nav>
 
