@@ -1,6 +1,6 @@
 ---
 title: Dot Product
-draft: true
+draft: false
 updated: 2026-11-21
 ---
 
