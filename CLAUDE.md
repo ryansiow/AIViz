@@ -30,6 +30,7 @@ Reference apps the design was studied from (patterns only, never their content o
 | Framework | **Nuxt 4** (Vue 3.5, Vue Router 5), TypeScript | Source lives in `app/` (Nuxt 4 layout). Static generation. |
 | Animation | **GSAP 3.15** + **DrawSVGPlugin** | GSAP and all its plugins are free. Registered once in `app/engine/gsap.ts`. |
 | Maths | **KaTeX 0.16** | Rendered with `renderToString`, so it works at build time (SSR). CSS is imported globally in `nuxt.config.ts`. |
+| Explain content | **Nuxt Content 3.17** + `remark-math` / `rehype-katex` | One Markdown (MDC) file per concept in `content/explain/`. Uses Node's built-in SQLite (`sqliteConnector: 'native'`), no native build. |
 | Styling | Plain CSS: design tokens (CSS custom properties) + scoped component styles | No Tailwind or UI library. |
 | Fonts | Inter (UI), JetBrains Mono (numbers, code, log), KaTeX fonts (maths) | Google Fonts link in `nuxt.config.ts`. |
 | Unit tests | **Vitest 3** (`tests/unit`) | Pure logic only, Node environment, `~` alias to `app/`. |
@@ -37,7 +38,7 @@ Reference apps the design was studied from (patterns only, never their content o
 | Type checking | `vue-tsc` via `nuxi typecheck` | Must be clean before committing. |
 | CI | GitHub Actions (`.github/workflows/ci.yml`) | On pull requests and pushes to `main`: typecheck → unit → Playwright. |
 
-Not used, on purpose: D3 (only small helpers were needed, see `engine/plot.ts`), Rough.js (the hand-drawn style was dropped), Nuxt Content (planned for Phase 5), any CSS framework.
+Not used, on purpose: D3 (only small helpers were needed, see `engine/plot.ts`), Rough.js (the hand-drawn style was dropped), any CSS framework.
 
 ---
 
@@ -105,11 +106,15 @@ app/
     plane/                     PlaneGrid, PlaneVector, AngleArc (reusable SVG primitives)
     explain/                   FormulaBlock, RevealPhrase, RevealHint, Term
   composables/useUi.ts         useSidebar, useTheme, useConceptView (?view=explain)
+  composables/useExplainIndex.ts  Which concepts have an explainer and which are drafts (sidebar dots, topbar chip)
+  utils/explain.ts             explainPath() / parseExplainPath(): curriculum slugs <-> content paths
   plugins/track.ts             v-track directive (hover tracking overlay)
   plugins/hydrated.client.ts   Sets <html data-hydrated="true"> once hydrated (test hook)
   types/concept.ts             Param schema types, Readout, LogEntry, TrackMeta, Hue, helpers
   utils/math.ts                clamp, snap, formatNumber, renderInlineTex ($…$ → KaTeX HTML, escaped)
   utils/track.ts               Reactive store behind the tracking overlay
+content/explain/<chapter>/<concept>.md   Explain view text (Markdown + MDC + $maths$), see §5.7
+content.config.ts              The `explain` collection and its front matter schema (draft, updated)
 design/concept-page-mock.html  The LOCKED visual reference (v2). Open it in a browser to compare.
 tests/unit/*.test.ts           Vitest
 tests/e2e/*.spec.ts            Playwright; *.mobile.spec.ts run on the phone project only
@@ -199,6 +204,22 @@ Morphs (for example Softmax bars rescaling) are written inline with `tl.fromTo(e
 - **Inputs stay editable while playing** (a deliberate difference from vizlearn, which locks them). Changing one rebuilds in place.
 - Log lines are `LogSegment[]` (`{ text, hue? }`), monospace, plain text (no LaTeX). Steps reached so far are shown; the newest is highlighted.
 
+### 5.7 Explain content (Nuxt Content)
+
+- One file per concept: `content/explain/<chapter>/<concept>.md`. **The file path is the link** to the curriculum (`explainPath()`); a unit test checks every file matches a real concept and that every `ready` concept has one.
+- Front matter: `title` (must equal the curriculum title), `draft` (boolean), `updated` (YYYY-MM-DD). Do not write a `# H1`: the page renders the title. Start with a short intro paragraph, then `## sections`.
+- **`draft: true`** = written by Claude, not yet reviewed by the owner. It shows an amber sidebar dot (filled if the concept is `ready`, a ring if `planned`) and an **"In draft"** chip after the concept name in the topbar (kept visible on phones). The owner flips it to `false` after review. **Anything Claude writes or substantially rewrites is `draft: true`.**
+- Writing syntax:
+  - Maths: `$…$` inline, `$$…$$` display (rendered at build time by `rehype-katex`; display maths gets the formula-card style).
+  - Coloured term: `:term[$\mathbf{w}$]{hue="blue"}` or `:term[projection]{hue="green"}`. Hues follow §6.
+  - Self-test: `:reveal[perpendicular]` or `:reveal[$\mathbf{w}\cdot\mathbf{x}+b$]`. The reveal hint is added at the top automatically when a page has reveals.
+  - Put maths in the slot (`[$…$]`), not in a `tex="…"` attribute.
+  - Tables and lists are styled; tables scroll inside their own box on phones.
+- The explain components (`components/explain/`) are registered **global** so MDC can use them; `reveal` and `formula` are aliases (`content.renderer.alias`) for `RevealPhrase` and `FormulaBlock`.
+- **The concept page loads the explainer** (`useAsyncData` in `[concept].vue`), whatever the view, and passes it to `ExplainView` as `doc`. That puts it in the prerendered payload. Fetching it only when Explain opens made the static site query the content database in the browser (a SQLite WASM download).
+- Concepts without a file show their summary and a "not written yet" note.
+- Content rules: original writing; the vault may be used as reference; never state a vault `[VERIFY]` claim as fact; numbers in worked examples must match the visualisation's defaults (compute them, don't estimate).
+
 ---
 
 ## 6. Design system
@@ -251,8 +272,9 @@ The visual direction is **locked**: `design/concept-page-mock.html` (v2), a ligh
 3. Register it in `app/concepts/registry.ts` and set `status: 'ready'` in the curriculum. Add the module path to the `vi.mock` list in `tests/unit/registry.test.ts`.
 4. **Unit tests** (`tests/unit/<concept>.test.ts`): the worked example's numbers, invariants (probabilities sum to 1, derivative matches a finite difference…), each preset's outcome, and edge cases (zero, parallel, overflow, off-chart).
 5. **E2E tests:** add the path to the smoke list in `tests/e2e/concepts.spec.ts` (plays every step, no console errors) and to `concept-page.mobile.spec.ts`. Add concept-specific tests for the caption and values at the final step, and for presets.
-6. **Visual check** at steps 1, mid and last, in light and dark, with the extreme presets. Look for label/curve/tick collisions, clipped content, and "spoilers" (the answer shown before its step).
-7. Run the full definition of done (§3).
+6. **Explainer:** write or update `content/explain/<chapter>/<concept>.md` (§5.7) with `draft: true`, and add the path to `EXPLAINED` in `tests/e2e/explain.spec.ts`.
+7. **Visual check** at steps 1, mid and last, in light and dark, with the extreme presets. Look for label/curve/tick collisions, clipped content, and "spoilers" (the answer shown before its step).
+8. Run the full definition of done (§3).
 
 Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free card placement), `transformers-llms/softmax` (bars and in-place morphs), `optimisation/gradient-descent` (curves, iterative runs, variable-length timelines, off-chart handling).
 
@@ -273,21 +295,25 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 11. **E2E: wait for hydration** (`visit()` waits for `html[data-hydrated]`) and for `svg.scene.ready`. Use `getByRole(..., { exact: true })` for "Play"/"Pause" ("Playback speed" also matches "Play"). After Next (which animates), wait for `playing() === false` before the next action. When hovering, aim at a spot not covered by another element (Playwright waits for the target to receive the pointer).
 12. **Nuxt components are referenced by file name** (`pathPrefix: false`), so component file names must be unique across sub-folders.
 13. `nuxt.config.ts` pre-bundles `gsap`, `gsap/DrawSVGPlugin` and `katex` (`vite.optimizeDeps.include`), which avoids a reload on first visit in dev. Add new heavy client libraries there.
+14. **Reveal phrases are `inline-block`.** As plain inline spans, parts of a reveal holding KaTeX did not receive clicks (the paragraph caught them). Keep `display: inline-block`.
+15. **Content in a static build:** any `queryCollection` that runs only on the client (not during prerender) makes the browser download the content database. Load content in the page's SSR path so it lands in `_payload.json`.
+16. **E2E on the dev server:** the Nuxt devtools button sits at the bottom centre of the viewport and intercepts clicks there. Scroll targets away from it, or check hit-tests with that in mind.
 
 ---
 
 ## 9. Testing conventions
 
 - **Unit (Vitest):** pure functions only: `utils/`, `engine/plane.ts`, `engine/plot.ts`, each concept's `derive.ts`, curriculum/registry integrity. No `.vue` imports (Vitest has no Vue plugin here). That is why maths lives in `derive.ts`, separate from `index.ts`. `tests/unit/registry.test.ts` stubs the concept modules with `vi.mock`.
-- **E2E (Playwright):** specs by area: `navigation`, `theme`, `sidebar` (+ `.mobile`), `components` (playground controls), `concept-player` (engine behaviour on Dot Product), `concepts` (per-concept stories + smoke for every ready concept), `concept-page.mobile`. Prefer roles and accessible names; use `data-el` for diagram parts; drive the timeline with `window.__aiviz`.
+- **Unit, content:** `explain-content.test.ts` reads `content/explain/` with Node `fs`: paths match the curriculum, front matter is valid, ready concepts have an explainer, hues are semantic, `$` delimiters balance.
+- **E2E (Playwright):** specs by area: `navigation`, `theme`, `sidebar` (+ `.mobile`), `components` (playground controls), `concept-player` (engine behaviour on Dot Product), `concepts` (per-concept stories + smoke for every ready concept), `explain` (every explainer renders without KaTeX errors, reveals, draft dot and chip), `concept-page.mobile`. Prefer roles and accessible names; use `data-el` for diagram parts; drive the timeline with `window.__aiviz`.
 - Flakiness budget is zero: run `--repeat-each=3` after changing timing, hover or player code.
-- Current counts (end of Phase 4): **64 unit tests, 50 e2e tests**, all passing.
+- Current counts (end of Phase 5): **73 unit tests, 68 e2e tests**, all passing.
 
 ---
 
 ## 10. Git, PRs and CI
 
-- **Never commit directly to `main`.** One branch per phase or task (`phase-4-vertical-slice`, `docs/claude-md`…), then a PR into `main`. The owner reviews and merges.
+- **Commits go directly to `main`** while the owner is the only contributor (owner's decision, 2026-11-21, from Phase 5 on). Still run the full definition of done (§3) before pushing, since CI runs on every push to `main`. If the owner asks for a branch and PR for a change, use one (`phase-N-…`), and go back to branches + PRs if other contributors join.
 - Commit or push only when the owner asks. Commit messages describe *what and why*, in sections. End commit messages with:
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
   End PR descriptions with: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
@@ -306,17 +332,19 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 | 2 | Component library: controls, panel, overlay, Explain blocks, playground; Vitest + Playwright + CI | ✅ Merged (PR #1) |
 | 3 | GSAP engine (module contract, player, beats, plane primitives) + **Dot Product** | ✅ Merged (PR #2) |
 | 4 | Vertical slice: **Softmax** (+ temperature) and **Gradient Descent** (+ learning rate); plot helpers; step-preserving rebuilds | ✅ Merged (PR #3) |
-| 5 | **Explain content:** Nuxt Content v3, one Markdown file per concept in the app, using the `explain/` components (FormulaBlock, RevealPhrase, Term, RevealHint) via MDC; `RevealHint` at the top | ⏳ Next |
+| 5 | **Explain content:** Nuxt Content v3, one Markdown file per concept, KaTeX maths, MDC terms and reveals, draft flag (amber dot + "In draft" chip). 9 draft explainers | ✅ On `main` (direct commit); explainers await owner review |
 | 6 | **Build out the curriculum:** 1–2 concepts per week, chapter by chapter, using the §7 checklist. Temperature and Learning Rate can reuse the Softmax / Gradient Descent modules with their own step emphasis | Planned |
 | 7 | **Quality bar:** keyboard and a11y pass, reduced-motion review, contrast, tablet layout, progress tracking (localStorage; the sidebar dots already support `ready`), worst-case data (break-ui), motion audit (improve-animations) | Planned |
 | — | Hosting (static: Cloudflare Pages or Vercel) | Deferred until the owner approves |
 
 Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent`. All other 38 concepts have a placeholder stage.
 
+Explainers (all `draft: true`, awaiting review): the 3 ready concepts plus `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `learning-basics/loss-function`, `optimisation/learning-rate`, `transformers-llms/temperature`. The other 32 concepts show the "not written yet" note.
+
 ### Known gaps / small debts
 
 - Dot Product: the `proj_w(x)` label can overlap x when x lies along w.
-- Explain view has only the summary and prev/next links until Phase 5.
+- `npm audit`: Nuxt Content brings `zod@3` (2 high advisories), used at build time only; the fix needs breaking `--force` upgrades. The other 12 advisories predate Phase 5.
 - Progress tracking (seen / finished) is not implemented yet.
 
 ---
