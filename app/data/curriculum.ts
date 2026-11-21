@@ -77,7 +77,7 @@ export const curriculum: Chapter[] = [
     title: 'Optimisation',
     blurb: 'How parameters move towards a lower loss.',
     concepts: [
-      c('gradient-descent', 'Gradient Descent', 'Step downhill against the gradient.'),
+      c('gradient-descent', 'Gradient Descent', 'Step downhill against the gradient.', 'ready'),
       c('learning-rate', 'Learning Rate', 'The step size, and the most important knob.'),
       c('stochastic-gradient-descent', 'Stochastic Gradient Descent', 'Noisy steps from mini-batches.'),
       c('adam', 'Adam', 'Momentum plus per-parameter step sizes.'),
@@ -92,7 +92,7 @@ export const curriculum: Chapter[] = [
     concepts: [
       c('tokenization', 'Tokenization', 'Splitting text into tokens.'),
       c('embeddings', 'Embeddings', 'Meaning as a position in space.'),
-      c('softmax', 'Softmax', 'Turn scores into probabilities.'),
+      c('softmax', 'Softmax', 'Turn scores into probabilities.', 'ready'),
       c('temperature', 'Temperature', 'Sharpen or flatten next-token sampling.'),
       c('attention', 'Attention', 'Every token weighs every other token.'),
       c('multi-head-attention', 'Multi-Head Attention', 'Several attention patterns in parallel.'),

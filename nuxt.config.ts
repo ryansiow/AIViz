@@ -3,6 +3,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  // Pre-bundle heavy client deps so the first visit doesn't trigger a reload.
+  vite: {
+    optimizeDeps: { include: ['gsap', 'gsap/DrawSVGPlugin', 'katex'] },
+  },
+
   // Components are referenced by file name, regardless of sub-folder.
   components: [{ path: '~/components', pathPrefix: false }],
 

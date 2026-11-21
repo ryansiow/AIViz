@@ -74,9 +74,22 @@ export function usePlayer(module: Ref<AnyConceptModule | null>, values: Ref<Reco
     const gsap = getGsap()
 
     const prev = tl.value
-    const keepTime = prev ? prev.time() : 0
+    // Remember where we are as (step, fraction through that step), not as a raw
+    // time: a rebuild can change how long each step is (e.g. fewer points to draw).
+    const keepStep = stepIndex.value
+    let keepFrac = 1
+    let keepStopStep: number | null = null
+    if (prev) {
+      const s0 = stepStart(keepStep)
+      const s1 = stepEnd(keepStep)
+      keepFrac = s1 > s0 ? Math.min(1, Math.max(0, (prev.time() - s0) / (s1 - s0))) : 1
+      if (stopAt !== null) {
+        const target = stopAt
+        keepStopStep = steps.value.findIndex((_, i) => Math.abs(stepEnd(i) - target) < 1e-3)
+        if (keepStopStep < 0) keepStopStep = null
+      }
+    }
     const wasPlaying = playing.value && !reduced.value
-    const keepStop = stopAt
     if (prev) {
       prev.revert()
       prev.kill()
@@ -111,11 +124,18 @@ export function usePlayer(module: Ref<AnyConceptModule | null>, values: Ref<Reco
     t.timeScale(speed.value)
 
     // First build: show step 1 finished, so the stage is never blank.
-    t.pause(built ? Math.min(keepTime, t.duration()) : stepEnd(0))
+    // Later builds: same step, same fraction through it.
+    if (built) {
+      const s0 = stepStart(keepStep)
+      const s1 = stepEnd(keepStep)
+      t.pause(keepFrac >= 1 ? s1 : s0 + keepFrac * (s1 - s0))
+    } else {
+      t.pause(stepEnd(0))
+    }
     built = true
     ready.value = true
     progress.value = t.progress()
-    stopAt = keepStop
+    stopAt = keepStopStep === null ? null : stepEnd(keepStopStep)
     if (wasPlaying) t.play()
   }
 
@@ -241,20 +261,22 @@ export function usePlayer(module: Ref<AnyConceptModule | null>, values: Ref<Reco
     mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     reduced.value = mq.matches
     mq.addEventListener('change', onMq)
-    // Test hook: lets end-to-end tests drive the player deterministically.
-    ;(window as unknown as { __aiviz?: unknown }).__aiviz = {
-      seek,
-      goToStep,
-      progress: () => progress.value,
-      step: () => stepIndex.value,
-      playing: () => playing.value,
+    // Test hook (dev server only): lets end-to-end tests drive the player deterministically.
+    if (import.meta.dev) {
+      ;(window as unknown as { __aiviz?: unknown }).__aiviz = {
+        seek,
+        goToStep,
+        progress: () => progress.value,
+        step: () => stepIndex.value,
+        playing: () => playing.value,
+      }
     }
   })
   onBeforeUnmount(() => {
     mq?.removeEventListener('change', onMq)
     clearReducedTimer()
     tl.value?.kill()
-    delete (window as unknown as { __aiviz?: unknown }).__aiviz
+    if (import.meta.dev) delete (window as unknown as { __aiviz?: unknown }).__aiviz
   })
 
   return {
