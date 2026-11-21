@@ -62,7 +62,10 @@ npx playwright install chromium   # first time only, for e2e
 ### Definition of done for any change
 
 1. `npm run typecheck` prints no errors.
-2. `npm run test:unit` and `npm run test:e2e` pass. For anything touching the player, timelines or hover, also pass `--repeat-each=3`.
+2. Tests pass, run at the right scope (owner's rule, to keep the loop fast):
+   - **While building**, run only what you changed: `npm run test:unit` (under a second) and the e2e specs for the concept or area at hand, e.g. `npx playwright test concepts -g "vectors"`.
+   - **Once, before committing**, run the full e2e suite in a single pass (`npm run test:e2e`, about 20 s). Its smoke test plays every ready concept, so shared-code changes cannot quietly break an older one.
+   - **`--repeat-each=3` only when the change touches the player, `engine/beats.ts`, timelines or hover** (shared timing code). A new concept that only uses existing beats does not need it.
 3. `npm run generate` succeeds.
 4. **Look at it**, in light and dark: the browser pane, or Playwright screenshots (see §12). Tests do not catch layout collisions; screenshots do.
 5. Update this file if architecture, conventions or status changed.
@@ -84,6 +87,7 @@ app/
     dev/components.vue         Component playground (dev only)
   data/curriculum.ts           THE curriculum: chapters → concepts (slug, title, summary, status)
   concepts/
+    learning-basics/data.ts    Shared datasets (study hours → score, exact fit 6x + 46; a noisy wave, train/test)
     registry.ts                "<chapter>/<concept>" → lazy import of the concept module
     <chapter>/<concept>/
       derive.ts                params schema + pure derive() + layout constants (unit-tested)
@@ -97,7 +101,8 @@ app/
     plane.ts                   2D plane geometry (toSvg, angles, arcs, arrowheads, label/card placement,
                                fitPlane: auto scale + origin for a box, sideLabel: label beside a segment)
     plot.ts                    Linear scales, 1/2/5 ticks, curvePath (edge-clipped), compact numbers,
-                               clipSegment, tangentSegment
+                               clipSegment, tangentSegment, frame (scales + ticks for a chart box), polylinePath
+    fit.ts                     Least squares (linearFit, polyFit with a ridge penalty), solve, mse, mean, normalPdf
     matrix.ts                  gridLayout (cells, row/col highlights, brackets), 2×2 maths: matVec, det2,
                                inverse2, column, classify2 (identity/rotation/shear/collapse…)
   components/                  Auto-imported by FILE NAME (pathPrefix: false), sub-folders are only organisation
@@ -109,7 +114,8 @@ app/
     stage/                     StageCaption, TrackOverlay
     plane/                     PlaneGrid, PlaneVector, AngleArc (reusable SVG primitives)
     matrix/                    MatrixGrid (matrix or column vector as tinted cells; highlights start hidden)
-    plot/                      TangentLine (tangent through a point, from tangentSegment)
+    plot/                      TangentLine; PlotAxes (axes, grid, ticks from frame(), xFormat/yFormat);
+                               ScatterPoints (dots + hit targets, filled or hollow)
     explain/                   FormulaBlock, RevealPhrase, RevealHint, Term
   composables/useUi.ts         useSidebar, useTheme, useConceptView (?view=explain)
   composables/useReviewStatus.ts  What awaits the owner's review per concept: draft explainers + unreviewed visualisations (sidebar dots, topbar chip)
@@ -292,7 +298,7 @@ The visual direction is **locked**: `design/concept-page-mock.html` (v2), a ligh
 7. **Visual check** at steps 1, mid and last, in light and dark, with the extreme presets. Look for label/curve/tick collisions, clipped content, and "spoilers" (the answer shown before its step).
 8. Run the full definition of done (§3).
 
-Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free card placement), `foundations/vectors` (auto-fitted plane, tip-to-tail, a list "ledger" beside the plane), `foundations/matrix-multiplication` (MatrixGrid with row/column highlights + a transformed grid), `foundations/derivatives-chain-rule` (two linked plots, tangent lines, nudge triangles with room-aware labels), `transformers-llms/softmax` (bars and in-place morphs), `optimisation/gradient-descent` (curves, iterative runs, variable-length timelines, off-chart handling).
+Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free card placement), `foundations/vectors` (auto-fitted plane, tip-to-tail, a list "ledger" beside the plane), `foundations/matrix-multiplication` (MatrixGrid with row/column highlights + a transformed grid), `foundations/derivatives-chain-rule` (two linked plots, tangent lines, nudge triangles with room-aware labels), `learning-basics/loss-function` (PlotAxes + ScatterPoints, residuals drawn as squares, comparison bars), `learning-basics/overfitting` (a fit plus a sweep chart on a log scale), `transformers-llms/softmax` (bars and in-place morphs), `optimisation/gradient-descent` (curves, iterative runs, variable-length timelines, off-chart handling).
 
 ---
 
@@ -322,6 +328,8 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 22. **Caption line breaks:** `renderInlineTex` glues punctuation that follows maths (`$x$,`) into a no-wrap span, so a line never starts with a comma. Keep punctuation directly after the closing `$`.
 23. **Rounded factors must multiply to the rounded product.** When a caption shows `a × b = c`, round `a`, `b` and `c` to enough digits (3 for slopes) that a learner's check works (0.2 × 2 ≠ 0.39; 0.197 × 2 = 0.393).
 24. **The sidebar only expands the current chapter.** An e2e test that looks up a sidebar item must visit a page in that item's chapter.
+25. **The right answer must not be coloured early.** When an element's "correct" styling belongs to a later step, render it as a separate overlay (`answer-mark` in Cross-Entropy) faded in at that step, not as a class on the base element.
+26. **Cold dev server:** the first e2e run after adding several pages can time out while Vite compiles them (one spurious failure in Batch 3). Rerun before suspecting the code.
 
 ---
 
@@ -331,7 +339,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 - **Unit, content:** `explain-content.test.ts` reads `content/explain/` with Node `fs`: paths match the curriculum, front matter is valid, ready concepts have an explainer, hues are semantic, `$` delimiters balance.
 - **E2E (Playwright):** specs by area: `navigation`, `theme`, `sidebar` (+ `.mobile`), `components` (playground controls), `concept-player` (engine behaviour on Dot Product), `concepts` (per-concept stories + smoke for every ready concept), `explain` (every explainer renders without KaTeX errors, reveals, draft dot and chip), `concept-page.mobile`. Prefer roles and accessible names; use `data-el` for diagram parts; drive the timeline with `window.__aiviz`.
 - Flakiness budget is zero: run `--repeat-each=3` after changing timing, hover or player code.
-- Current counts (Phase 6, Batch 2): **137 unit tests, 96 e2e tests**, all passing (288/288 over `--repeat-each=3`).
+- Current counts (Phase 6, Batch 3): **165 unit tests, 124 e2e tests**, all passing.
 
 ---
 
@@ -362,7 +370,7 @@ Good patterns to copy: `foundations/dot-product` (2D geometry, collision-free ca
 | — | Hosting (static: Cloudflare Pages or Vercel) | Deferred until the owner approves |
 | — | **GitHub Issues as the work queue:** the owner will file Issues; Claude fetches them daily (`gh issue list`) and works on them, committing locally (no push, see §10) | Planned, not set up yet |
 
-Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent` (reviewed); `transformers-llms/temperature`, `optimisation/learning-rate` (Batch 1) and `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `foundations/derivatives-chain-rule` (Batch 2), all **awaiting review**. All other 32 concepts have a placeholder stage. The whole Foundations chapter is ready.
+Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimisation/gradient-descent` (reviewed); `transformers-llms/temperature`, `optimisation/learning-rate` (Batch 1) and `foundations/vectors`, `foundations/cosine-similarity`, `foundations/matrix-multiplication`, `foundations/derivatives-chain-rule` (Batch 2) and all 7 `learning-basics/*` concepts (Batch 3), all **awaiting review**. All other 25 concepts have a placeholder stage. The Foundations and Learning Basics chapters are fully ready.
 
 ### 11.1 Phase 6 batches
 
@@ -370,15 +378,15 @@ Ready concepts: `foundations/dot-product`, `transformers-llms/softmax`, `optimis
 |---|---|---|---|
 | 1 | Temperature, Learning Rate (variants of Softmax / Gradient Descent) | none (`roundTo` helper) | ✅ Built, awaiting review |
 | 2 | Vectors, Cosine Similarity, Matrix Multiplication, Derivatives & Chain Rule | MatrixGrid; TangentLine (+ fitPlane, sideLabel, clipSegment) | ✅ Built, awaiting review |
-| 3 | Learning Basics (7) | ScatterPlot, loss-curve plot | Next |
-| 4 | Neural Networks (8) | NetworkGraph (forward values, backward gradients) | Planned |
+| 3 | Learning Basics (7) | PlotAxes + ScatterPoints (chart frame, scatter), polylinePath (loss curves), engine/fit.ts | ✅ Built, awaiting review |
+| 4 | Neural Networks (8) | NetworkGraph (forward values, backward gradients) | Next |
 | 5 | Optimisation: SGD, Adam, Early Stopping, Hyperparameter Tuning | ContourPlot | Planned |
 | 6 | Transformers & LLMs (7 left) | TokenStrip, Heatmap | Planned |
 | 7 | Generative Models (6) | Histogram/density, encoder–decoder diagram | Planned |
 
 Each primitive: geometry in `engine/` with unit tests, an SVG component, and a `/dev/components` entry before a concept uses it. At the end of each batch: `dataviz` and `break-ui` passes, CLAUDE.md update.
 
-Explainers (`draft: true`, awaiting review): Softmax and Gradient Descent, all 6 Batch 1–2 concepts (Derivatives & Chain Rule is new in Batch 2), and `learning-basics/loss-function`. Dot Product's explainer has been reviewed by the owner (`draft: false`). The other 31 concepts show the "not written yet" note.
+Explainers (`draft: true`, awaiting review): Softmax and Gradient Descent, all 6 Batch 1–2 concepts, and all 7 Learning Basics concepts. Dot Product's explainer has been reviewed by the owner (`draft: false`). The other 25 concepts show the "not written yet" note. No planned concept currently has an explainer, so the sidebar's amber-ring state (planned + draft) has no live example.
 
 ### Known gaps / small debts
 
@@ -387,6 +395,7 @@ Explainers (`draft: true`, awaiting review): Softmax and Gradient Descent, all 6
 - Matrix Multiplication: the `c₁`/`c₂` labels use Unicode subscripts in the math font, which sit a little low; vectors along the same line (e.g. `c₂` and `x` in the default) crowd each other.
 - `npm audit`: Nuxt Content brings `zod@3` (2 high advisories), used at build time only; the fix needs breaking `--force` upgrades. The other 12 advisories predate Phase 5.
 - Progress tracking (seen / finished) is not implemented yet.
+- Training Curve uses synthetic curves (smooth shapes plus fixed noise), said so in its explainer; Learning Basics data sets are small and hand-picked so numbers can be checked by hand.
 
 ---
 
