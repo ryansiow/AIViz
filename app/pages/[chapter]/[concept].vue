@@ -4,6 +4,7 @@ import { findConcept } from '~/data/curriculum'
 import { usePlayer } from '~/engine/usePlayer'
 import type { AnyConceptModule } from '~/engine/types'
 import { defaultsOf } from '~/types/concept'
+import { explainPath } from '~/utils/explain'
 
 // Remount for each concept so the player, inputs and timeline start fresh.
 definePageMeta({ key: (route) => route.path })
@@ -14,6 +15,14 @@ if (!found) {
   throw createError({ statusCode: 404, statusMessage: 'Concept not found', fatal: true })
 }
 const { view } = useConceptView()
+
+// Load the explainer whatever the view, so it is prerendered into this page's payload.
+// (Fetching it only when Explain opens would make the static site query the content
+// database in the browser, which downloads SQLite WASM.)
+const docPath = explainPath(found.chapter.slug, found.concept.slug)
+const { data: explainDoc } = await useAsyncData(`explain:${docPath}`, () =>
+  queryCollection('explain').path(docPath).first(),
+)
 
 const module = shallowRef<AnyConceptModule | null>(await loadConcept(found.chapter.slug, found.concept.slug))
 const values = ref<Record<string, unknown>>(module.value ? defaultsOf(module.value.params) : {})
@@ -98,6 +107,7 @@ useHead({ title: `${found.concept.title} — AIViz` })
       :chapter="found!.chapter"
       :concept="found!.concept"
       :index="found!.index"
+      :doc="explainDoc"
       :prev="found!.prev"
       :next="found!.next"
     />

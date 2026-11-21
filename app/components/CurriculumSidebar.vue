@@ -3,6 +3,7 @@ import { curriculum } from '~/data/curriculum'
 
 const route = useRoute()
 const { close } = useSidebar()
+const { isDraft } = useExplainIndex()
 
 const query = ref('')
 const currentChapter = computed(() => route.params.chapter as string | undefined)
@@ -63,8 +64,13 @@ function onNavigate() {
             :aria-current="currentChapter === chapter.slug && currentConcept === concept.slug ? 'page' : undefined"
             @click="onNavigate"
           >
-            <span class="dot" :class="concept.status" aria-hidden="true" />
+            <span
+              class="dot"
+              :class="[concept.status, { draft: isDraft(chapter.slug, concept.slug) }]"
+              aria-hidden="true"
+            />
             <span class="label">{{ concept.title }}</span>
+            <span v-if="isDraft(chapter.slug, concept.slug)" class="sr-only">(explainer in draft)</span>
           </NuxtLink>
         </li>
       </ul>
@@ -100,5 +106,8 @@ ul { list-style: none; }
 .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--line-strong); flex: none; }
 .dot.ready { background: var(--c-green); border-color: var(--c-green); }
+/* Explainer drafted, awaiting the owner's review: amber. Fill still means "has a visualisation". */
+.dot.draft { border-color: var(--c-amber); }
+.dot.draft.ready { background: var(--c-amber); }
 .empty { padding: 8px; font-size: 13px; color: var(--text-faint); }
 </style>

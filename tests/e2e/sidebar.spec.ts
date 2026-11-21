@@ -25,7 +25,8 @@ test.describe('curriculum sidebar (desktop)', () => {
     await visit(page, '/')
     const nav = page.getByRole('navigation', { name: 'Curriculum' })
     await nav.getByRole('searchbox', { name: 'Search concepts' }).fill('gradient')
-    await expect(nav.getByRole('link')).toHaveText([
+    // Visible labels (link names may also carry "(explainer in draft)" for screen readers).
+    await expect(nav.locator('.concept .label')).toHaveText([
       'Vanishing & Exploding Gradients',
       'Gradient Descent',
       'Stochastic Gradient Descent',

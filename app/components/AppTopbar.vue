@@ -4,6 +4,7 @@ import { findChapter, findConcept } from '~/data/curriculum'
 const route = useRoute()
 const { toggle: toggleSidebar, open } = useSidebar()
 const { view, setView } = useConceptView()
+const { isDraft } = useExplainIndex()
 
 const chapterSlug = computed(() => route.params.chapter as string | undefined)
 const conceptSlug = computed(() => route.params.concept as string | undefined)
@@ -33,6 +34,11 @@ const concept = computed(() =>
       <template v-if="concept">
         <span aria-hidden="true">›</span>
         <b>{{ concept.title }}</b>
+        <span
+          v-if="isDraft(chapterSlug!, conceptSlug!)"
+          class="draft-chip"
+          title="The explainer is a first draft, not yet reviewed"
+        >In draft</span>
       </template>
     </nav>
 
@@ -75,6 +81,10 @@ const concept = computed(() =>
 .crumbs a { transition: color var(--dur-fast) ease; }
 @media (hover: hover) and (pointer: fine) { .crumbs a:hover { color: var(--text); } }
 .crumbs b { color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.draft-chip {
+  flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; line-height: 18px;
+  color: var(--c-amber); background: var(--c-amber-soft);
+}
 .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .tabs { display: flex; padding: 3px; gap: 2px; background: var(--surface-2); border-radius: 10px; }
 .tab {
@@ -89,7 +99,8 @@ const concept = computed(() =>
 :deep(.icon-btn svg) { width: 17px; height: 17px; }
 @media (hover: hover) and (pointer: fine) { :deep(.icon-btn:hover) { background: var(--surface); color: var(--text); } }
 
-@media (max-width: 760px) { .crumbs { display: none; } }
+/* Narrow: drop the trail, keep the draft chip. */
+@media (max-width: 760px) { .crumbs > :not(.draft-chip) { display: none; } }
 @media (max-width: 560px) {
   .topbar { gap: 8px; padding: 0 12px; }
   .tab { padding: 5px 10px; }

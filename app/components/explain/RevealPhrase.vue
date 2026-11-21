@@ -23,7 +23,9 @@ const revealed = ref(false)
 </template>
 
 <style scoped>
+/* inline-block: one solid hit box, even over KaTeX's nested inline boxes */
 .reveal {
+  display: inline-block; max-width: 100%; line-height: inherit; text-indent: 0;
   cursor: pointer; padding: 0 4px; border-radius: 4px; background: var(--surface-2); color: transparent;
   transition: color var(--dur-ui) ease, background-color var(--dur-ui) ease;
 }
