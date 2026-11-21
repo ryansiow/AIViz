@@ -54,11 +54,11 @@ export const curriculum: Chapter[] = [
     title: 'Foundations',
     blurb: 'The vector and calculus toolkit every model is built from.',
     concepts: [
-      c('vectors', 'Vectors', 'Arrows with direction and length; lists of numbers.'),
+      c('vectors', 'Vectors', 'Arrows with direction and length; lists of numbers.', 'ready'),
       c('dot-product', 'Dot Product', 'One number that says how much two vectors align.', 'ready', { reviewed: true }),
-      c('cosine-similarity', 'Cosine Similarity', 'Compare direction, ignore length.'),
-      c('matrix-multiplication', 'Matrix Multiplication', 'Many dot products at once.'),
-      c('derivatives-chain-rule', 'Derivatives & Chain Rule', 'How a change flows through composed functions.'),
+      c('cosine-similarity', 'Cosine Similarity', 'Compare direction, ignore length.', 'ready'),
+      c('matrix-multiplication', 'Matrix Multiplication', 'Many dot products at once.', 'ready'),
+      c('derivatives-chain-rule', 'Derivatives & Chain Rule', 'How a change flows through composed functions.', 'ready'),
     ],
   },
   {

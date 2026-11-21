@@ -30,6 +30,15 @@ For example, $(3, 1)$ and $(6, 2)$ have cosine similarity :reveal[$1$], because 
 
 In text embeddings, length often reflects things you don't care about when comparing meaning, such as how long or how common a piece of text is. Direction carries the meaning. Cosine similarity asks "are these about the same thing?" without being fooled by size.
 
+## Try it
+
+The visualisation starts from $\mathbf{a} = (3, 1)$ and $\mathbf{b} = (1, 2)$: dot product $5$, lengths $\sqrt{10}$ and $\sqrt{5}$, so $\cos\theta = 5 / \sqrt{50} \approx 0.707$ and $\theta = 45^\circ$. Stretching $\mathbf{b}$ by $k = 2$ doubles the dot product to $10$ but leaves the cosine :reveal[at $0.707$].
+
+- **Same direction**: $(3, 1)$ and $(6, 2)$, the example above.
+- **Perpendicular**: $(3, 1)$ and $(-1, 3)$ give $0$.
+- **Opposite**: $(3, 1)$ and $(-3, -1)$ give $-1$.
+- **Short but aligned**: a long and a short vector along the same line still score $1$.
+
 A useful shortcut: if every vector is normalised to length 1 first, cosine similarity :reveal[is just the dot product]. Many vector databases store normalised embeddings for exactly this reason.
 
 ## Where it appears

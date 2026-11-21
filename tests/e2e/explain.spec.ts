@@ -7,6 +7,7 @@ const EXPLAINED = [
   '/foundations/dot-product',
   '/foundations/cosine-similarity',
   '/foundations/matrix-multiplication',
+  '/foundations/derivatives-chain-rule',
   '/learning-basics/loss-function',
   '/optimisation/gradient-descent',
   '/optimisation/learning-rate',
@@ -60,21 +61,21 @@ test('display maths sits in a formula card', async ({ page }) => {
 })
 
 test('a concept without an explainer shows its summary and a note', async ({ page }) => {
-  await visit(page, '/foundations/derivatives-chain-rule?view=explain')
+  await visit(page, '/learning-basics/supervised-learning?view=explain')
   await expect(page.locator('.explain .pending')).toContainText('hasn’t been written yet')
   await expect(page.getByRole('note')).toHaveCount(0)
 })
 
 test.describe('draft flag', () => {
   test('a draft explainer shows an "In draft" chip after the concept name', async ({ page }) => {
-    await visit(page, '/foundations/dot-product')
+    await visit(page, '/transformers-llms/softmax')
     const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' })
     await expect(crumbs.locator('.draft-chip')).toContainText('In draft')
     await expect(crumbs.locator('.draft-chip')).toHaveAttribute('title', 'Explainer is a first draft, not reviewed yet')
   })
 
-  test('no chip for a concept without an explainer', async ({ page }) => {
-    await visit(page, '/foundations/derivatives-chain-rule')
+  test('no chip for a planned concept without an explainer', async ({ page }) => {
+    await visit(page, '/learning-basics/supervised-learning')
     await expect(page.locator('.draft-chip')).toHaveCount(0)
   })
 
@@ -83,12 +84,9 @@ test.describe('draft flag', () => {
     const sidebar = page.getByRole('navigation', { name: 'Curriculum' })
     const dot = (name: string) => sidebar.getByRole('link', { name }).locator('.dot')
 
-    // Ready + draft: filled amber. Planned + draft: amber ring. No explainer: unchanged.
-    await expect(dot('Dot Product (in draft)')).toHaveClass(/\bready\b.*\bdraft\b/)
-    await expect(dot('Vectors (in draft)')).toHaveClass(/\bplanned\b.*\bdraft\b/)
-    await expect(dot('Derivatives & Chain Rule')).not.toHaveClass(/\bdraft\b/)
-
-    const fill = await dot('Dot Product (in draft)').evaluate((el) => getComputedStyle(el).backgroundColor)
+    // Ready but not reviewed: filled amber.
+    await expect(dot('Vectors (in draft)')).toHaveClass(/\bready\b.*\bdraft\b/)
+    const fill = await dot('Vectors (in draft)').evaluate((el) => getComputedStyle(el).backgroundColor)
     const amber = await page.evaluate(() => {
       const probe = document.createElement('span')
       probe.style.color = 'var(--c-amber)'
@@ -98,6 +96,11 @@ test.describe('draft flag', () => {
       return c
     })
     expect(fill).toBe(amber)
+
+    // Planned with a draft explainer: amber ring. No explainer: unchanged. (The sidebar opens the current chapter.)
+    await visit(page, '/learning-basics/supervised-learning')
+    await expect(dot('Loss Function (in draft)')).toHaveClass(/\bplanned\b.*\bdraft\b/)
+    await expect(dot('Supervised Learning')).not.toHaveClass(/\bdraft\b/)
   })
 })
 

@@ -85,3 +85,47 @@ export function fmt(v: number, digits = 3): string {
   return r < 0 ? `−${s}` : s
 }
 export const fmtFactor = (v: number) => (v < 0 ? `(${fmt(v)})` : fmt(v))
+
+/**
+ * A plane whose scale and origin fit every point inside `box` (SVG units).
+ * The extent is rounded out to whole maths units plus `pad`, and the scale
+ * snaps to one of `units`, so the view only changes in visible steps.
+ */
+export function fitPlane(points: Vec[], box: Rect, opts: { pad?: number; units?: number[] } = {}): Plane {
+  const pad = opts.pad ?? 1
+  const units = opts.units ?? [48, 40, 36, 32, 28, 24, 20, 16, 13, 10, 8, 6, 5, 4]
+  const pts = points.filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+  const xs = [0, ...pts.map((p) => p[0])]
+  const ys = [0, ...pts.map((p) => p[1])]
+  const minX = Math.floor(Math.min(...xs) + 1e-9) - pad
+  const maxX = Math.ceil(Math.max(...xs) - 1e-9) + pad
+  const minY = Math.floor(Math.min(...ys) + 1e-9) - pad
+  const maxY = Math.ceil(Math.max(...ys) - 1e-9) + pad
+  const fit = Math.min(box.w / (maxX - minX), box.h / (maxY - minY))
+  const unit = units.find((u) => u <= fit) ?? Math.max(1, Math.floor(fit))
+  return {
+    ox: Math.round(box.x + box.w / 2 - ((minX + maxX) / 2) * unit),
+    oy: Math.round(box.y + box.h / 2 + ((minY + maxY) / 2) * unit),
+    unit,
+  }
+}
+
+/**
+ * Label beside the middle of a segment (SVG coords), offset along its normal.
+ * The normal points away from `away` when given (e.g. the centre of a triangle).
+ */
+export function sideLabel(from: Vec, to: Vec, gap = 12, away?: Vec): { x: number; y: number; anchor: 'start' | 'end' | 'middle' } {
+  const mx = (from[0] + to[0]) / 2
+  const my = (from[1] + to[1]) / 2
+  const dx = to[0] - from[0]
+  const dy = to[1] - from[1]
+  const l = Math.hypot(dx, dy) || 1
+  let nx = dy / l
+  let ny = -dx / l
+  if (away && (mx - away[0]) * nx + (my - away[1]) * ny < 0) {
+    nx = -nx
+    ny = -ny
+  }
+  const anchor = Math.abs(nx) < 0.35 ? 'middle' : nx > 0 ? 'start' : 'end'
+  return { x: mx + nx * gap, y: my + ny * gap + 5 + (ny > 0.35 ? 4 : 0), anchor }
+}

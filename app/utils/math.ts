@@ -22,19 +22,30 @@ const escapeHtml = (s: string) =>
  * dollar signs is escaped, so this is safe for authored strings.
  */
 export function renderInlineTex(text: string): string {
-  return text
-    .split(/(\$[^$]+\$)/g)
-    .map((part) => {
-      if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
-        try {
-          return katex.renderToString(part.slice(1, -1), { throwOnError: false })
-        } catch {
-          return escapeHtml(part)
-        }
-      }
-      return escapeHtml(part)
-    })
-    .join('')
+  const parts = text.split(/(\$[^$]+\$)/g)
+  let out = ''
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!
+    if (!(part.startsWith('$') && part.endsWith('$') && part.length > 2)) {
+      out += escapeHtml(part)
+      continue
+    }
+    let html: string
+    try {
+      html = katex.renderToString(part.slice(1, -1), { throwOnError: false })
+    } catch {
+      html = escapeHtml(part)
+    }
+    // Keep punctuation right after the maths on the same line ("$x$," never wraps before the comma).
+    const glue = parts[i + 1]?.match(/^[,.;:!?)]+/)?.[0]
+    if (glue) {
+      out += `<span style="white-space:nowrap">${html}${escapeHtml(glue)}</span>`
+      parts[i + 1] = parts[i + 1]!.slice(glue.length)
+    } else {
+      out += html
+    }
+  }
+  return out
 }
 
 /**

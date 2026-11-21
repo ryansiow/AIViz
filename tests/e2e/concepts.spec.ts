@@ -12,7 +12,7 @@ async function open(page: Page, path: string) {
 }
 
 test.describe('every ready concept', () => {
-  for (const path of ['/foundations/dot-product', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
+  for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
     test(`${path} plays through every step without errors`, async ({ page }) => {
       const errors: string[] = []
       page.on('pageerror', (e) => errors.push(String(e)))
@@ -166,5 +166,111 @@ test.describe('learning rate', () => {
     await page.keyboard.press('End') // η₂ = 2.2
     await expect(page.locator('.player .pill')).toHaveText('7 / 8')
     await expect(page.locator('[data-el="factor-1"]')).toContainText('1.20')
+  })
+})
+
+/* Phase 6 Batch 2: Foundations. */
+
+test.describe('vectors', () => {
+  test('worked example: the ledger fills in step by step, nothing early', async ({ page }) => {
+    await open(page, '/foundations/vectors')
+    await goToStep(page, 4)
+    await expect(page.locator('[data-el="row-sum"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 7)
+    await expect(page.locator('[data-el="row-len"]')).toContainText('3.61')
+    await expect(page.locator('[data-el="row-sum"]')).toContainText('(4, 1)')
+    await expect(page.locator('[data-el="row-ka"]')).toContainText('(6, 4)')
+    await expect(page.locator('[data-el="row-unit"]')).toContainText('(0.83, 0.55)')
+  })
+
+  test('presets: cancelling out leaves no sum arrow; k = −1 flips', async ({ page }) => {
+    await open(page, '/foundations/vectors')
+    await page.getByRole('button', { name: 'Cancel out' }).click()
+    await goToStep(page, 5)
+    await expect(caption(page)).toContainText('cancel out')
+    await expect(page.locator('[data-el="sum"]')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Flip (k = −1)' }).click()
+    await goToStep(page, 6)
+    await expect(caption(page)).toContainText('opposite way')
+  })
+})
+
+test.describe('cosine similarity', () => {
+  test('default: cos θ = 0.707, and stretching b changes only the dot product', async ({ page }) => {
+    await open(page, '/foundations/cosine-similarity')
+    await goToStep(page, 5)
+    await expect(page.locator('[data-el="gauge-dot"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="cos-text"]')).toContainText('0.707')
+    await expect(page.locator('[data-el="dot-2"]')).toContainText('10')
+    const k = page.getByRole('slider', { name: /Stretch b/ })
+    await k.focus()
+    await page.keyboard.press('End') // k = 3
+    await expect(page.locator('.player .pill')).toHaveText('7 / 7')
+    await expect(page.locator('[data-el="dot-2"]')).toContainText('15')
+    await expect(page.locator('[data-el="cos-text"]')).toContainText('0.707')
+  })
+
+  test('presets: perpendicular and opposite', async ({ page }) => {
+    await open(page, '/foundations/cosine-similarity')
+    await goToStep(page, 6)
+    await page.getByRole('button', { name: 'Perpendicular' }).click()
+    await expect(caption(page)).toContainText('perpendicular')
+    await page.getByRole('button', { name: 'Opposite' }).click()
+    await expect(caption(page)).toContainText('exactly opposite')
+    await expect(page.locator('[data-el="cos-text"]')).toContainText('−1')
+  })
+})
+
+test.describe('matrix multiplication', () => {
+  test('one dot product per row, output cells fill in order', async ({ page }) => {
+    await open(page, '/foundations/matrix-multiplication')
+    await goToStep(page, 2)
+    await expect(page.locator('[data-el="work-1"]')).toContainText('1·3 + 2·1 = 5')
+    await expect(page.locator('[data-el="y-cell-0-0"]')).toHaveCSS('opacity', '1')
+    await expect(page.locator('[data-el="y-cell-1-0"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 4)
+    await expect(page.locator('[data-el="y-cell-1-0"]')).toHaveText('1')
+    await expect(page.locator('[data-el="A-row-0"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 7)
+    await expect(caption(page)).toContainText('shear')
+    await expect(page.locator('[data-el="mix"]')).toContainText('3·(1, 0) + 1·(2, 1)')
+  })
+
+  test('presets: rotation and collapse', async ({ page }) => {
+    await open(page, '/foundations/matrix-multiplication')
+    await goToStep(page, 7)
+    await page.getByRole('button', { name: 'Rotate 90°' }).click()
+    await expect(caption(page)).toContainText('rotation')
+    await expect(page.locator('[data-el="y-cell-0-0"]')).toHaveText('−1')
+    await page.getByRole('button', { name: 'Collapse' }).click()
+    await expect(caption(page)).toContainText('squashed onto a line')
+    await expect(page.locator('[data-el="det"]')).toContainText('areas × 0')
+  })
+})
+
+test.describe('derivatives and chain rule', () => {
+  test('default: (2x + 1)² at x = 1, slopes appear one at a time, dy/dx = 6 × 2 = 12', async ({ page }) => {
+    await open(page, '/foundations/derivatives-chain-rule')
+    await goToStep(page, 3)
+    await expect(page.locator('[data-el="rise-label-g"]')).toHaveText('Δu = 1')
+    await expect(page.locator('[data-el="mult-g"]')).toHaveText('× 2')
+    await expect(page.locator('[data-el="mult-f"]')).toHaveCSS('opacity', '0')
+    await expect(page.locator('[data-el="result"]')).toHaveCSS('opacity', '0')
+    await goToStep(page, 6)
+    await expect(page.locator('[data-el="rise-label-f"]')).toHaveText('Δy = 7')
+    await expect(page.locator('[data-el="result"]')).toContainText('6 × 2')
+    await expect(page.locator('[data-el="result"]')).toContainText('= 12')
+  })
+
+  test('presets: a tiny nudge measures 12.2; the neuron multiplies a small sigmoid slope', async ({ page }) => {
+    await open(page, '/foundations/derivatives-chain-rule')
+    await goToStep(page, 6)
+    await page.getByRole('button', { name: 'Tiny nudge' }).click()
+    await expect(page.locator('.log-body .line').last()).toContainText('Δy/Δx = 12.2')
+    await page.getByRole('button', { name: 'Neuron: σ(2x + 1)' }).click()
+    await expect(page.locator('.player .pill')).toHaveText('7 / 7')
+    await expect(page.locator('[data-el="result"]')).toContainText('0.197 × 2')
+    await expect(page.locator('[data-el="result"]')).toContainText('= 0.393')
   })
 })

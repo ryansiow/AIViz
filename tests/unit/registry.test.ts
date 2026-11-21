@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 // The registry imports concept modules (which import .vue files) lazily, so
 // only its keys are needed here. Stub the dynamic imports.
 vi.mock('~/concepts/foundations/dot-product', () => ({ default: {} }))
+vi.mock('~/concepts/foundations/vectors', () => ({ default: {} }))
+vi.mock('~/concepts/foundations/cosine-similarity', () => ({ default: {} }))
+vi.mock('~/concepts/foundations/matrix-multiplication', () => ({ default: {} }))
+vi.mock('~/concepts/foundations/derivatives-chain-rule', () => ({ default: {} }))
 vi.mock('~/concepts/transformers-llms/softmax', () => ({ default: {} }))
 vi.mock('~/concepts/optimisation/gradient-descent', () => ({ default: {} }))
 vi.mock('~/concepts/optimisation/learning-rate', () => ({ default: {} }))

@@ -83,3 +83,52 @@ export function compact(v: number): string {
   }
   return s.replace('-', '−')
 }
+
+export interface Segment { x1: number; y1: number; x2: number; y2: number }
+
+/**
+ * Clips the segment p→q to a box with Liang–Barsky. Returns null when the
+ * segment lies completely outside.
+ */
+export function clipSegment(p: [number, number], q: [number, number], box: { x0: number; x1: number; y0: number; y1: number }): Segment | null {
+  const dx = q[0] - p[0]
+  const dy = q[1] - p[1]
+  let t0 = 0
+  let t1 = 1
+  const checks: [number, number][] = [
+    [-dx, p[0] - box.x0],
+    [dx, box.x1 - p[0]],
+    [-dy, p[1] - box.y0],
+    [dy, box.y1 - p[1]],
+  ]
+  for (const [pp, qq] of checks) {
+    if (pp === 0) {
+      if (qq < 0) return null
+      continue
+    }
+    const r = qq / pp
+    if (pp < 0) t0 = Math.max(t0, r)
+    else t1 = Math.min(t1, r)
+    if (t0 > t1) return null
+  }
+  return { x1: p[0] + t0 * dx, y1: p[1] + t0 * dy, x2: p[0] + t1 * dx, y2: p[1] + t1 * dy }
+}
+
+/**
+ * The tangent line to a curve at (x, y) with the given slope, in SVG
+ * coordinates: `halfLength` px either side of the point, clipped to the plot.
+ */
+export function tangentSegment(x: number, y: number, slope: number, sx: Scale, sy: Scale, halfLength = 1e4): Segment | null {
+  const px = sx(x)
+  const py = sy(y)
+  // Direction of one maths unit along x, in SVG units.
+  const dx = sx(x + 1) - px
+  const dy = sy(y + slope) - py
+  const l = Math.hypot(dx, dy)
+  if (!Number.isFinite(l) || l === 0) return null
+  const ux = (dx / l) * halfLength
+  const uy = (dy / l) * halfLength
+  const [x0, x1] = [Math.min(...sx.range), Math.max(...sx.range)]
+  const [y0, y1] = [Math.min(...sy.range), Math.max(...sy.range)]
+  return clipSegment([px - ux, py - uy], [px + ux, py + uy], { x0, x1, y0, y1 })
+}

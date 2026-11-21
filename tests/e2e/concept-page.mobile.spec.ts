@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { visit } from './helpers'
 
 /** A live concept page at phone width. */
-for (const path of ['/foundations/dot-product', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
+for (const path of ['/foundations/vectors', '/foundations/dot-product', '/foundations/cosine-similarity', '/foundations/matrix-multiplication', '/foundations/derivatives-chain-rule', '/transformers-llms/softmax', '/optimisation/gradient-descent', '/transformers-llms/temperature', '/optimisation/learning-rate']) {
   test(`${path} works at phone width`, async ({ page }) => {
     await visit(page, path)
     await page.locator('svg.scene.ready').waitFor()
@@ -36,7 +36,7 @@ test('an explainer reads well at phone width', async ({ page }) => {
 })
 
 test('the "In draft" chip stays visible at phone width', async ({ page }) => {
-  await visit(page, '/foundations/dot-product')
+  await visit(page, '/transformers-llms/softmax')
   await expect(page.locator('.draft-chip')).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link')).toBeHidden()
 })

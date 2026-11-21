@@ -7,7 +7,11 @@ import type { AnyConceptModule } from '~/engine/types'
  * (a unit test checks this).
  */
 export const conceptLoaders: Record<string, () => Promise<{ default: AnyConceptModule }>> = {
+  'foundations/vectors': () => import('./foundations/vectors'),
   'foundations/dot-product': () => import('./foundations/dot-product'),
+  'foundations/cosine-similarity': () => import('./foundations/cosine-similarity'),
+  'foundations/matrix-multiplication': () => import('./foundations/matrix-multiplication'),
+  'foundations/derivatives-chain-rule': () => import('./foundations/derivatives-chain-rule'),
   'transformers-llms/softmax': () => import('./transformers-llms/softmax'),
   'optimisation/gradient-descent': () => import('./optimisation/gradient-descent'),
   'optimisation/learning-rate': () => import('./optimisation/learning-rate'),

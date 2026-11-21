@@ -48,6 +48,10 @@ describe('renderInlineTex', () => {
   it('escapes HTML outside maths', () => {
     expect(renderInlineTex('<b>x</b> & y')).toBe('&lt;b&gt;x&lt;/b&gt; &amp; y')
   })
+  it('keeps punctuation after maths on the same line', () => {
+    const html = renderInlineTex('so $x = 1$, then')
+    expect(html).toMatch(/^so <span style="white-space:nowrap"><span class="katex">.*<\/span>,<\/span> then$/)
+  })
   it('leaves a lone dollar sign alone', () => {
     expect(renderInlineTex('costs $5')).toBe('costs $5')
   })

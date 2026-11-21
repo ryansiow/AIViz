@@ -121,3 +121,17 @@ test('hidden phrases reveal on click and keyboard', async ({ page }) => {
   await page.keyboard.press('Enter')
   await expect(phrases).toHaveCount(0)
 })
+
+test('matrix grid highlights rows; the tangent line follows its point', async ({ page }) => {
+  await expect(page.locator('[data-el="pg-A-cell-0-2"]')).toHaveText('−0.5')
+  await expect(page.locator('[data-el="pg-A-row-0"]')).toHaveCSS('opacity', '1')
+  await page.getByRole('radio', { name: 'Row 2' }).click()
+  await expect(page.locator('[data-el="pg-A-row-0"]')).toHaveCSS('opacity', '0')
+  await expect(page.locator('[data-el="pg-A-row-1"]')).toHaveCSS('opacity', '1')
+
+  await expect(page.locator('[data-el="pg-tan-label"]')).toHaveText('slope 2.0')
+  const slider = page.getByRole('slider', { name: /Tangent at x/ })
+  await slider.focus()
+  await page.keyboard.press('End')
+  await expect(page.locator('[data-el="pg-tan-label"]')).toHaveText('slope 4.0')
+})

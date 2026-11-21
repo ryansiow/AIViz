@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { curvePath, linear, tangentSegment } from '~/engine/plot'
 import { defaultsOf, type LogEntry, type ParamSchema, type Preset, type Readout, type TrackMeta } from '~/types/concept'
 
 /**
@@ -62,6 +63,19 @@ const sx = (v: number) => 200 + v * U
 const sy = (v: number) => 150 - v * U
 const metaW = computed<TrackMeta>(() => ({ id: 'TRK-01', kind: 'VECTOR', name: 'w', hue: 'blue', rows: [['coords', `(${w.value})`], ['|w|', f(nw.value)]], foot: 'T+00:04:12 · FRM 0132' }))
 const metaX = computed<TrackMeta>(() => ({ id: 'TRK-02', kind: 'VECTOR', name: 'x', hue: 'rose', rows: [['coords', `(${x.value})`], ['|x|', f(nx.value)]] }))
+// Batch 2 primitives: MatrixGrid (with a row highlight) and TangentLine on y = x².
+const prim = {
+  t: { kind: 'number', label: 'Tangent at x', tex: 'x', hue: 'violet', min: -2, max: 2, step: 0.1, default: 1, digits: 1 },
+  row: { kind: 'select', label: 'Highlight row', default: '0', options: [{ value: '0', label: 'Row 1' }, { value: '1', label: 'Row 2' }, { value: 'none', label: 'None' }] },
+} satisfies ParamSchema
+const primValues = ref<Record<string, unknown>>(defaultsOf(prim))
+const tx = computed(() => primValues.value.t as number)
+const psx = linear([-2.2, 2.2], [230, 390])
+const psy = linear([-0.5, 4.8], [260, 40])
+const parabola = curvePath((v) => v * v, psx, psy, 120)
+const tangent = computed(() => tangentSegment(tx.value, tx.value ** 2, 2 * tx.value, psx, psy))
+const tangentLabel = computed(() => ({ x: psx(tx.value), y: psy(tx.value ** 2) - 12, anchor: 'middle' as const }))
+
 const metaDot = computed<TrackMeta>(() => ({ id: 'TRK-03', kind: 'SCALAR', name: 'w · x', hue: 'green', rows: [['value', String(dot.value)], ['sign', dot.value > 0 ? 'positive' : dot.value < 0 ? 'negative' : 'zero']] }))
 </script>
 
@@ -108,6 +122,19 @@ const metaDot = computed<TrackMeta>(() => ({ id: 'TRK-03', kind: 'SCALAR', name:
       />
     </div>
 
+    <h2>Matrix grid and tangent line</h2>
+    <div class="grid">
+      <section class="stage-demo prim" data-track-host :class="`hl-${primValues.row}`">
+        <svg viewBox="0 0 400 300" class="svg short">
+          <MatrixGrid el="pg-A" :values="[[1, 2, -0.5], [0, 1, 3]]" :x="30" :y="80" hue="blue" label="A" />
+          <MatrixGrid el="pg-x" :values="[[3], [1], [2]]" :x="30" :y="200" :cell="28" hue="rose" label="x" vector />
+          <path :d="parabola" fill="none" stroke="var(--text-dim)" stroke-width="1.5" />
+          <TangentLine el="pg-tan" :seg="tangent" :point="[psx(tx), psy(tx ** 2)]" hue="violet" :label="`slope ${(2 * tx).toFixed(1)}`" :label-at="tangentLabel" />
+        </svg>
+      </section>
+      <div class="card"><ParamPanel v-model="primValues" :schema="prim" /></div>
+    </div>
+
     <h2>Other controls</h2>
     <div class="card">
       <ParamPanel v-model="miscValues" :schema="misc" />
@@ -134,6 +161,9 @@ h2 { font-size: 15px; font-weight: 600; margin: 32px 0 10px; }
 .grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
 .stage-demo { position: relative; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); min-height: 420px; overflow: hidden; }
 .svg { display: block; width: 100%; height: 420px; }
+.svg.short { height: 300px; }
+.stage-demo.prim { min-height: 300px; }
+.prim.hl-0 :deep([data-el="pg-A-row-0"]), .prim.hl-1 :deep([data-el="pg-A-row-1"]) { opacity: 1; }
 .panel-demo { border: 1px solid var(--line); border-radius: var(--radius-xl); max-height: 640px; }
 .card { max-width: 680px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .dump { margin-top: 12px; padding: 10px; border-radius: var(--radius); background: var(--surface); font: 12px var(--font-mono); color: var(--text-dim); }

@@ -9,24 +9,29 @@ import type { BuildContext } from './types'
 
 type Ctx = BuildContext<unknown>
 type Targets = Element[]
+// Beats skip empty target lists (optional elements), which GSAP would warn about.
 
 /** Draw a stroke from its start (lines, arcs). The lead of a step. */
 export function drawIn(ctx: Ctx, t: Targets, at: number, duration = 0.7, ease = 'power2.out') {
+  if (!t.length) return
   ctx.tl.fromTo(t, { drawSVG: '0%' }, { drawSVG: '100%', duration, ease }, at)
 }
 
 /** Fade in place. For decoration (grids, guides, fills). */
 export function fadeIn(ctx: Ctx, t: Targets, at: number, duration = 0.4, to = 1) {
+  if (!t.length) return
   ctx.tl.fromTo(t, { opacity: 0 }, { opacity: to, duration, ease: 'power1.out' }, at)
 }
 
 /** Fade with a small rise. For labels and support text. */
 export function riseIn(ctx: Ctx, t: Targets, at: number, duration = 0.35, distance = 4) {
+  if (!t.length) return
   ctx.tl.fromTo(t, { opacity: 0, y: distance }, { opacity: 1, y: 0, duration, ease: 'power2.out' }, at)
 }
 
 /** Scale up from 60% with a fade. For arrowheads and points landing with a line. */
 export function popIn(ctx: Ctx, t: Targets, at: number, duration = 0.2) {
+  if (!t.length) return
   ctx.tl.fromTo(
     t,
     { opacity: 0, scale: 0.6, transformOrigin: '50% 50%' },
@@ -43,6 +48,7 @@ export function popIn(ctx: Ctx, t: Targets, at: number, duration = 0.2) {
  * hover target live from the first frame.
  */
 export function activate(ctx: Ctx, t: Targets, at: number) {
+  if (!t.length) return
   ctx.tl.fromTo(t, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01, ease: 'none' }, at)
 }
 
@@ -72,4 +78,19 @@ export function arcIn(ctx: Ctx, el: string, at: number): number {
 /** Hold the timeline open until `at` so a step has time to be read. */
 export function holdUntil(ctx: Ctx, at: number) {
   if (ctx.tl.duration() < at) ctx.tl.set({}, {}, at)
+}
+
+/**
+ * Fade an element that is already on stage down to `to`, to move attention
+ * elsewhere. immediateRender is off: it follows the element's own entrance.
+ */
+export function dim(ctx: Ctx, t: Targets, at: number, to = 0.25, duration = 0.35) {
+  if (!t.length) return
+  ctx.tl.fromTo(t, { opacity: 1 }, { opacity: to, duration, ease: 'power1.inOut', immediateRender: false }, at)
+}
+
+/** Fade a transient element (a highlight) out again. */
+export function fadeOut(ctx: Ctx, t: Targets, at: number, duration = 0.25) {
+  if (!t.length) return
+  ctx.tl.fromTo(t, { opacity: 1 }, { opacity: 0, duration, ease: 'power1.in', immediateRender: false }, at)
 }
